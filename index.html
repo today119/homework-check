@@ -68,7 +68,7 @@ header{
 .tabs::-webkit-scrollbar{display:none}
 .tab{
   flex:0 0 auto; border-radius:14px 14px 0 0; padding:.5em .95em;
-  font-size:clamp(15px,1.9vh,21px); background:#fff; border:2px solid var(--line);
+  font-size:clamp(16px,2.2vh,25px); background:#fff; border:2px solid var(--line);
   border-bottom:none; color:var(--sub); position:relative; top:2px;
 }
 .tab.on{background:var(--grape); border-color:var(--grape-d); color:#fff; top:0; padding-bottom:calc(.5em + 4px)}
@@ -77,7 +77,7 @@ header{
 
 /* ── 진행 요약 ── */
 .summary{display:flex; align-items:center; gap:12px; padding:12px 16px 4px; flex-wrap:wrap}
-.count{font-size:clamp(20px,3.2vh,34px)}
+.count{font-size:clamp(22px,3.6vh,40px)}
 .count b{color:var(--pink); font-size:1.25em}
 .bar{
   flex:1; min-width:160px; height:20px; border-radius:99px; background:#e9e4f5;
@@ -88,16 +88,16 @@ header{
 
 /* ── 학생 카드 ── */
 main{padding:8px 12px 120px}
-.grid{display:grid; gap:11px; grid-template-columns:repeat(auto-fill,minmax(clamp(124px,12.5vw,190px),1fr))}
+.grid{display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(clamp(146px,14.5vw,225px),1fr))}
 .stu{
   position:relative; border-radius:20px; padding:.55em .4em .6em; background:var(--card);
   border:3px solid var(--line); box-shadow:var(--shadow);
   display:flex; flex-direction:column; align-items:center; gap:1px;
   transition:transform .08s, opacity .2s, background .2s, border-color .2s;
 }
-.stu .an{font-size:clamp(20px,2.8vh,32px); line-height:1.1}
-.stu .no{font-size:clamp(11px,1.35vh,15px); color:var(--sub); opacity:.85}
-.stu .nm{font-size:clamp(21px,3.2vh,36px); line-height:1.12; letter-spacing:-.5px}
+.stu .an{font-size:clamp(22px,3.1vh,36px); line-height:1.1}
+.stu .no{font-size:clamp(12px,1.5vh,17px); color:var(--sub); opacity:.85}
+.stu .nm{font-size:clamp(26px,4.1vh,48px); line-height:1.1; letter-spacing:-.5px}
 .stu:active{transform:scale(.95)}
 .stu::after{
   position:absolute; top:-8px; right:-6px; font-size:clamp(16px,2.1vh,23px);
@@ -131,7 +131,7 @@ main{padding:8px 12px 120px}
 }
 .show.on{display:flex}
 .show>*{position:relative; z-index:1}
-.show h2{margin:0; font-size:clamp(24px,5.2vh,58px); text-align:center; line-height:1.15}
+.show h2{margin:0; font-size:clamp(27px,5.8vh,66px); text-align:center; line-height:1.15}
 .show h2 span{color:var(--pink)}
 .show .sub{text-align:center; color:var(--sub); font-size:clamp(14px,2vh,22px); margin-top:.2em}
 .names{
@@ -142,7 +142,7 @@ main{padding:8px 12px 120px}
 .names b{
   display:flex; align-items:center; gap:.3em; font-weight:normal;
   background:#fff; border:4px solid var(--orange); border-radius:24px;
-  padding:.28em .72em; font-size:clamp(30px,8.2vh,98px); color:#c9741c;
+  padding:.26em .7em; font-size:clamp(36px,10vh,126px); color:#c9741c;
   box-shadow:0 5px 0 rgba(0,0,0,.08); line-height:1.15;
 }
 .names b i{font-style:normal; font-size:.9em}
@@ -164,7 +164,7 @@ main{padding:8px 12px 120px}
 /* 표로 보기 */
 .tblwrap{flex:1; overflow:auto; margin-top:1.5vh; -webkit-overflow-scrolling:touch}
 table{border-collapse:separate; border-spacing:0; margin:0 auto; background:#fff; border-radius:18px; overflow:hidden; box-shadow:0 4px 0 rgba(0,0,0,.07)}
-th,td{padding:.45em .75em; font-size:clamp(16px,2.7vh,30px); text-align:center; border-bottom:2px solid var(--line); white-space:nowrap}
+th,td{padding:.45em .8em; font-size:clamp(19px,3.3vh,38px); text-align:center; border-bottom:2px solid var(--line); white-space:nowrap}
 th{background:#f6f2ff; position:sticky; top:0; z-index:2}
 th:first-child,td:first-child{text-align:right; background:#fbf9ff; position:sticky; left:0; z-index:1}
 th:first-child{z-index:3}
@@ -285,6 +285,16 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
       줄바꿈·쉼표·번호(1. 김민준)가 섞여 있어도 알아서 정리합니다.</p>
     <textarea id="inRoster" placeholder="김민준&#10;이서연&#10;박도윤&#10;…"></textarea>
     <p class="hint" id="rosterCount">0명</p>
+
+    <label class="f">📎 백업 코드 <span style="font-size:.8em;color:var(--pink)">← 다른 기기에서도 쓰려면</span></label>
+    <p class="hint">이 앱은 <b>지금 쓰는 기기·브라우저 안에만</b> 저장돼요.<br>
+      아래 <b>「코드 복사」</b>를 눌러 카톡으로 나에게 보내두면, 다른 기기에서 그 코드를 붙여넣고
+      <b>「되살리기」</b>만 눌러도 명단이 그대로 돌아옵니다.</p>
+    <textarea id="inBackup" style="min-height:8vh;font-size:13px" placeholder="여기에 백업 코드를 붙여넣으세요"></textarea>
+    <div class="row">
+      <button class="btn mini" id="btnCopyBackup">📎 코드 복사</button>
+      <button class="btn mini" id="btnRestore">📥 되살리기</button>
+    </div>
 
     <div class="toggle" id="tgAnimal">
       <div class="sw"><i></i></div>
@@ -534,6 +544,7 @@ $('#btnSetting').onclick=()=>{
   $('#inKlass').value=S.klass;
   $('#inRoster').value=rosterText();
   $('#rosterCount').textContent=S.students.length+'명';
+  $('#inBackup').value='';
   swOf('#tgNumOnly').classList.toggle('on',S.numOnly);
   swOf('#tgAnimal').classList.toggle('on',S.animal);
   $('#mSetting').classList.add('on');
@@ -558,6 +569,42 @@ $('#btnSaveSetting').onclick=()=>{
   }
   save(); render(); $('#mSetting').classList.remove('on');
 };
+function encodeBackup(){
+  // 이름 목록 + 항목별 「제출한 사람 번호」만 담아 코드를 짧게 유지한다
+  const idx={}; S.students.forEach((s,i)=>idx[s.id]=i);
+  const payload={v:2, k:S.klass, n:S.students.map(s=>s.name),
+    i:S.items.map(it=>({n:it.name, d:Object.keys(it.done).map(k=>idx[k]).filter(v=>v!==undefined)})),
+    an:S.animal?1:0, no:S.numOnly?1:0};
+  return btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/=+$/,'');
+}
+function decodeBackup(code){
+  const c=code.trim().replace(/\s+/g,'');
+  const d=JSON.parse(decodeURIComponent(escape(atob(c))));
+  if(!d||!Array.isArray(d.n)||!d.n.length) throw new Error('bad');
+  const students=d.n.map((name,i)=>({id:uid(), no:i+1, name:String(name)}));
+  const items=(d.i||[]).map(it=>{
+    const done={}; (it.d||[]).forEach(i=>{ if(students[i]) done[students[i].id]=1; });
+    return {id:uid(), name:it.n||'숙제', date:today(), done};
+  });
+  return {k:d.k, st:students, it:items, an:!!d.an, no:!!d.no};
+}
+$('#btnCopyBackup').onclick=async ()=>{
+  if(!S.students.length){ toast('먼저 명렬표를 저장해 주세요 🙂'); return; }
+  const code=encodeBackup();
+  $('#inBackup').value=code;
+  try{ await navigator.clipboard.writeText(code); toast('코드를 복사했어요 📎 카톡에 붙여넣어 두세요!'); }
+  catch(e){ toast('아래 칸의 코드를 직접 복사해 주세요 🙂'); }
+};
+$('#btnRestore').onclick=()=>{
+  const code=$('#inBackup').value.trim();
+  if(!code){ toast('먼저 코드를 붙여넣어 주세요 🙂'); return; }
+  let d; try{ d=decodeBackup(code); }catch(e){ toast('코드가 올바르지 않아요 😢'); return; }
+  if(!confirm(`「${d.k||'우리 반'}」 ${d.st.length}명으로 되살릴까요?\n지금 화면의 내용은 사라져요.`)) return;
+  S=normalize({klass:d.k, students:d.st, items:d.it, animal:d.an, numOnly:d.no});
+  save(); render(); $('#mSetting').classList.remove('on');
+  toast('되살렸어요! 🎉');
+};
+
 $('#btnWipe').onclick=()=>{
   if(!confirm('정말 모두 지울까요?\n이름과 체크한 것이 전부 사라져요.')) return;
   S=normalize({}); save(); render(); $('#mSetting').classList.remove('on');
