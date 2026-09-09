@@ -199,9 +199,24 @@ tr.hasx td:first-child{color:#c9741c}
 .seg button{border:2px solid var(--line);border-radius:14px;padding:.5em .9em;background:#fff;
   font-size:clamp(15px,1.9vh,20px);color:var(--sub)}
 .seg button.on{background:var(--grape);border-color:var(--grape-d);color:#fff}
+.movebtn{display:flex;align-items:center;gap:.5em;border:2px solid var(--line);border-radius:16px;
+  padding:.6em .8em;background:#fff;font-size:clamp(16px,2.1vh,21px);width:100%;text-align:left}
+.movebtn.on{border-color:var(--grape);background:#f6f2ff}
+.movebtn span{margin-left:auto;font-size:.8em;color:var(--sub)}
+.cbox .who b{cursor:pointer}
+/* 청소 대상 고르기 그리드 — 한 화면에 많이 보이게 */
+#mClean .sheet{width:min(720px,100%)}
+.pickgrid{display:grid;gap:7px;grid-template-columns:repeat(auto-fill,minmax(clamp(92px,9vw,120px),1fr))}
+.pickgrid .stu{padding:.4em .2em .45em;border-width:3px}
+.pickgrid .stu::after{content:none}
+.pickgrid .stu .nm{font-size:clamp(17px,2.4vh,25px)}
+.pickgrid .stu .an{font-size:clamp(17px,2.2vh,24px)}
+.pickgrid .stu.sel{border-color:var(--orange);background:#fffaf2}
+.pickgrid .stu.sel .nm{color:#c9741c}
+.pickgrid .stu.off{opacity:.5}
 
 /* ── 모달 ── */
-#mEmoji{z-index:80}   /* 설정 모달(70) 위에 떠야 한다 */
+#mEmoji,#mMove{z-index:80}   /* 설정 모달(70) 위에 떠야 한다 */
 .modal{position:fixed; inset:0; z-index:70; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(60,50,80,.35); backdrop-filter:blur(3px)}
 .modal.on{display:flex}
 .sheet{
@@ -322,9 +337,25 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
       <b>저번에 했던 구역은 피해서</b> 돌아가며 배정돼요.</p>
     <div class="seg" id="cleanSeg"></div>
     <p class="hint" id="cleanWho"></p>
+    <p class="hint">이름을 눌러 <b>넣거나 뺄 수 있어요.</b> 숙제와 상관없이 청소할 친구도 넣으세요 🙂</p>
+    <div class="pickgrid" id="cleanStus" style="margin-bottom:6px"></div>
     <div class="row end">
       <button class="btn" id="btnCancelClean">취소</button>
       <button class="btn primary" id="btnDoClean">🧹 정하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 청소 구역 옮기기 -->
+<div class="modal" id="mMove">
+  <div class="sheet" style="width:min(520px,100%)">
+    <h3 id="moveTitle"></h3>
+    <p class="hint">어느 구역으로 옮길까요?</p>
+    <div class="alist" id="moveList"></div>
+    <div class="row end">
+      <button class="btn danger mini" id="btnMoveOut">청소에서 빼기</button>
+      <div class="spacer"></div>
+      <button class="btn" id="btnCloseMove">닫기</button>
     </div>
   </div>
 </div>
@@ -623,6 +654,7 @@ function rosterText(){ return S.students.map(s=>`${s.no}. ${s.name}`).join('\n')
 
 /* ── 청소 담당 정하기 ── */
 let cleanScope='item';   // 'item' = 이 항목 미제출자 / 'all' = 하나라도 밀린 친구
+let cleanPick=new Set();  // 실제 청소 대상(선생님이 자유롭게 넣고 뺀다)
 
 function cleanTargets(scope){
   if(scope==='all') return S.students.filter(s=>S.items.some(it=>!it.done[s.id]));
@@ -636,8 +668,8 @@ function areaScore(sid, aid){
   const i=h.indexOf(aid);
   return i===-1 ? 99 : i;      // 한 번도 안 했으면 가장 좋은 점수
 }
-function assignClean(scope){
-  const targets=shuffle(cleanTargets(scope).slice());
+function assignClean(list){
+  const targets=shuffle(list.slice());
   const load={}; S.areas.forEach(a=>load[a.id]=[]);
   if(!S.areas.length || !targets.length) return {by:load, targets};
   targets.forEach(s=>{
@@ -650,30 +682,30 @@ function assignClean(scope){
   });
   return {by:load, targets};
 }
-function doClean(scope){
-  const t=cleanTargets(scope);
+function doClean(){
+  const t=S.students.filter(s=>cleanPick.has(s.id));
   if(!S.areas.length){ toast('먼저 ⚙️ 설정에서 청소구역을 넣어주세요 🙂'); return; }
-  if(!t.length){ toast('청소할 친구가 없어요 — 다 냈네요 🎉'); return; }
-  const {by}=assignClean(scope);
+  if(!t.length){ toast('청소할 친구를 골라주세요 🙂'); return; }
+  const {by}=assignClean(t);
   // 이력 기록(최근 3개만 기억)
   Object.entries(by).forEach(([aid,list])=>list.forEach(sid=>{
     const h=S.cleanHist[sid]||[]; h.unshift(aid); S.cleanHist[sid]=h.slice(0,3);
   }));
-  S.clean={at:today(), scope, by};
+  S.clean={at:today(), n:t.length, by};
   save(); openClean();
 }
 function openClean(){
   const c=S.clean; if(!c) return;
-  $('#cleanSub').textContent=(c.scope==='all'? '하나라도 못 낸 친구' : `「${(item()||{}).name||''}」 못 낸 친구`)
-    +' · '+c.at;
+  $('#cleanSub').innerHTML=`${c.at} · 모두 <b>${c.n||0}명</b> &nbsp;·&nbsp; 이름을 누르면 구역을 옮길 수 있어요 ✏️`;
   const box=$('#cleanBox'); box.innerHTML='';
   S.areas.forEach(a=>{
     const list=c.by[a.id]||[];
     const d=document.createElement('div'); d.className='cbox';
     d.innerHTML=`<h3>${a.emoji} ${esc(a.name)} <span>${list.length}/${a.cap}명</span></h3>`+
       (list.length
-        ? `<div class="who">${list.map(id=>{const s=S.students.find(x=>x.id===id); return `<b>${esc(label(s))}</b>`;}).join('')}</div>`
+        ? `<div class="who">${list.map(id=>{const s=S.students.find(x=>x.id===id); return `<b data-sid="${id}">${esc(label(s))}</b>`;}).join('')}</div>`
         : '<div class="none">오늘은 없어요 🙂</div>');
+    d.querySelectorAll('.who b').forEach(el=>el.onclick=()=>openMove(el.dataset.sid));
     box.appendChild(d);
   });
   $('#cleanShow').classList.add('on');
@@ -694,23 +726,36 @@ function drawCleanSeg(){
   [['item', it? `「${it.name}」 못 낸 친구` : '이 항목', cleanTargets('item').length],
    ['all', '하나라도 밀린 친구 전부', cleanTargets('all').length]].forEach(([k,lab,n])=>{
     const b=document.createElement('button');
-    b.className=(cleanScope===k?'on':''); b.textContent=`${lab} ${n}명`;
-    b.onclick=()=>{ cleanScope=k; drawCleanSeg(); };
+    b.className=(cleanScope===k?'on':''); b.textContent=`${lab} ${n}명 다시 고르기`;
+    b.onclick=()=>{ cleanScope=k; cleanPick=new Set(cleanTargets(k).map(s=>s.id)); drawCleanSeg(); };
     seg.appendChild(b);
   });
-  const t=cleanTargets(cleanScope);
-  $('#cleanWho').innerHTML = t.length
-    ? `대상 <b>${t.length}명</b> : ${t.map(s=>esc(s.name)).join(', ')}`
-    : '대상이 없어요 — 모두 냈네요 🎉';
+
+  const chosen=S.students.filter(s=>cleanPick.has(s.id));
+  $('#cleanWho').innerHTML = chosen.length
+    ? `청소할 친구 <b>${chosen.length}명</b> : ${chosen.map(s=>esc(s.name)).join(', ')}`
+    : '아직 아무도 안 골랐어요. 아래에서 이름을 눌러주세요 🙂';
+
+  const box=$('#cleanStus'); box.innerHTML='';
+  S.students.forEach(s=>{
+    const on=cleanPick.has(s.id);
+    const b=document.createElement('button');
+    b.className='stu '+(on?'sel':'off');
+    b.innerHTML=(S.animal?`<div class="an">${animalOf(s)}</div>`:'')+
+      `<div class="no">${s.no}번</div><div class="nm">${esc(s.name)}</div>`;
+    b.onclick=()=>{ on? cleanPick.delete(s.id) : cleanPick.add(s.id); drawCleanSeg(); };
+    box.appendChild(b);
+  });
 }
 
 $('#btnClean').onclick=()=>{
   if(!S.students.length){ toast('명렬표를 먼저 넣어주세요 🙂'); return; }
+  if(!cleanPick.size) cleanPick=new Set(cleanTargets(cleanScope).map(s=>s.id));
   drawCleanSeg(); $('#mClean').classList.add('on');
 };
 $('#btnCancelClean').onclick=()=>$('#mClean').classList.remove('on');
-$('#btnDoClean').onclick=()=>{ $('#mClean').classList.remove('on'); doClean(cleanScope); };
-$('#btnCleanAgain').onclick=()=>doClean(S.clean? S.clean.scope : cleanScope);
+$('#btnDoClean').onclick=()=>{ $('#mClean').classList.remove('on'); doClean(); };
+$('#btnCleanAgain').onclick=()=>doClean();
 $('#btnCloseClean').onclick=()=>$('#cleanShow').classList.remove('on');
 $('#btnCleanCopy').onclick=async ()=>{
   const c=S.clean; if(!c) return;
@@ -721,6 +766,36 @@ $('#btnCleanCopy').onclick=async ()=>{
   try{ await navigator.clipboard.writeText(txt); toast('청소 명단을 복사했어요 📋'); }
   catch(e){ toast('복사가 안 됐어요 😢'); }
 };
+
+/* ── 배정 후 손으로 고치기 ── */
+let moveSid=null;
+function openMove(sid){
+  moveSid=sid;
+  const s=S.students.find(x=>x.id===sid); if(!s) return;
+  const curId=Object.keys(S.clean.by).find(aid=>(S.clean.by[aid]||[]).includes(sid));
+  $('#moveTitle').textContent=`${S.animal?animalOf(s)+' ':''}${s.name}`;
+  const box=$('#moveList'); box.innerHTML='';
+  S.areas.forEach(a=>{
+    const n=(S.clean.by[a.id]||[]).length;
+    const b=document.createElement('button');
+    b.className='movebtn'+(a.id===curId?' on':'');
+    b.innerHTML=`${a.emoji} ${esc(a.name)} <span>${n}/${a.cap}명${a.id===curId?' · 지금 여기':''}</span>`;
+    b.onclick=()=>{ moveTo(sid, a.id); $('#mMove').classList.remove('on'); };
+    box.appendChild(b);
+  });
+  $('#mMove').classList.add('on');
+}
+function moveTo(sid, aid){
+  Object.keys(S.clean.by).forEach(k=>{ S.clean.by[k]=(S.clean.by[k]||[]).filter(x=>x!==sid); });
+  if(aid){
+    S.clean.by[aid]=(S.clean.by[aid]||[]).concat([sid]);
+    const h=(S.cleanHist[sid]||[]); h[0]=aid; S.cleanHist[sid]=h.slice(0,3);
+  }
+  S.clean.n=Object.values(S.clean.by).flat().length;
+  save(); openClean();
+}
+$('#btnMoveOut').onclick=()=>{ moveTo(moveSid, null); $('#mMove').classList.remove('on'); };
+$('#btnCloseMove').onclick=()=>$('#mMove').classList.remove('on');
 
 /* ── 청소구역 편집 ── */
 let draftAreas=[];
@@ -875,7 +950,7 @@ $('#btnCopy').onclick=async ()=>{
 
 $$('.modal').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('on'); }));
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){ closeShow(); $('#cleanShow').classList.remove('on'); $$('.modal').forEach(m=>m.classList.remove('on')); }
+  if(e.key==='Escape'){ closeShow(); if(!$('#mMove').classList.contains('on')) $('#cleanShow').classList.remove('on'); $$('.modal').forEach(m=>m.classList.remove('on')); }
 });
 
 let toastTimer;
