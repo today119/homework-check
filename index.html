@@ -172,7 +172,36 @@ td.x{color:var(--pink); font-size:1.15em}
 td.o{color:#cfd8cf}
 tr.hasx td:first-child{color:#c9741c}
 
+/* ── 청소 ── */
+.clean{display:grid;align-content:center;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));
+  gap:1.4vh 1.1vw;flex:1;overflow:auto;margin-top:2vh;--sc:1}
+.cbox{background:#fff;border:4px solid var(--line);border-radius:24px;padding:1vh 1.4vw 1.3vh;
+  box-shadow:0 5px 0 rgba(0,0,0,.07)}
+.cbox h3{margin:0 0 .35em;display:flex;align-items:center;gap:.35em;
+  font-size:calc(clamp(20px,3.2vh,42px) * var(--sc))}
+.cbox h3 span{font-size:.55em;color:var(--sub)}
+.cbox .who{display:flex;flex-wrap:wrap;gap:.8vh 1vw}
+.cbox .who b{font-weight:normal;background:#fff3e6;border:4px solid #ffcb96;color:#c9741c;
+  border-radius:20px;padding:.15em .55em;line-height:1.15;
+  font-size:calc(clamp(24px,5.2vh,64px) * var(--sc))}
+.cbox .none{color:var(--sub);font-size:calc(clamp(15px,2.1vh,24px) * var(--sc))}
+.arow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.arow .pick{font-size:clamp(19px,2.4vh,26px);border:2px solid var(--line);border-radius:12px;
+  background:#fdfcff;width:2.4em;height:2em;line-height:1}
+.arow .n{flex:1;min-width:7em}
+.arow .num{width:4.6em}
+.arow label{font-size:clamp(12px,1.5vh,15px);color:var(--sub)}
+.alist{display:flex;flex-direction:column;gap:8px;margin-top:.5em}
+.epal{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;margin-top:.4em}
+.epal button{font-size:30px;line-height:1;padding:.32em 0;border-radius:14px;border:2px solid var(--line);background:#fff}
+.epal button:active{transform:scale(.92)}
+.seg{display:flex;gap:8px;flex-wrap:wrap;margin:.6em 0 .2em}
+.seg button{border:2px solid var(--line);border-radius:14px;padding:.5em .9em;background:#fff;
+  font-size:clamp(15px,1.9vh,20px);color:var(--sub)}
+.seg button.on{background:var(--grape);border-color:var(--grape-d);color:#fff}
+
 /* ── 모달 ── */
+#mEmoji{z-index:80}   /* 설정 모달(70) 위에 떠야 한다 */
 .modal{position:fixed; inset:0; z-index:70; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(60,50,80,.35); backdrop-filter:blur(3px)}
 .modal.on{display:flex}
 .sheet{
@@ -257,6 +286,7 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
   <button class="btn green" id="btnAllDone">모두 냈어요</button>
   <button class="btn" id="btnReset">이 항목 다시</button>
   <button class="btn" id="btnCopy">📋 명단 복사</button>
+  <button class="btn" id="btnClean">🧹 청소 담당 정하기</button>
 </div>
 
 <!-- 큰 화면 -->
@@ -269,6 +299,43 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
   <div class="foot">
     <button class="btn" id="btnTableMode">📊 표로 보기</button>
     <button class="btn primary" id="btnCloseShow">닫기</button>
+  </div>
+</div>
+
+<!-- 청소 담당 발표 -->
+<div class="show" id="cleanShow">
+  <h2 id="cleanTitle">🧹 오늘의 청소 담당</h2>
+  <div class="sub" id="cleanSub"></div>
+  <div class="clean" id="cleanBox"></div>
+  <div class="foot">
+    <button class="btn" id="btnCleanAgain">🎲 다시 뽑기</button>
+    <button class="btn" id="btnCleanCopy">📋 명단 복사</button>
+    <button class="btn primary" id="btnCloseClean">닫기</button>
+  </div>
+</div>
+
+<!-- 청소 대상 고르기 -->
+<div class="modal" id="mClean">
+  <div class="sheet">
+    <h3>🧹 청소 담당 정하기</h3>
+    <p class="hint">오늘 못 낸 친구들에게 청소구역을 나눠줍니다.<br>
+      <b>저번에 했던 구역은 피해서</b> 돌아가며 배정돼요.</p>
+    <div class="seg" id="cleanSeg"></div>
+    <p class="hint" id="cleanWho"></p>
+    <div class="row end">
+      <button class="btn" id="btnCancelClean">취소</button>
+      <button class="btn primary" id="btnDoClean">🧹 정하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 이모지 고르기 -->
+<div class="modal" id="mEmoji">
+  <div class="sheet" style="width:min(560px,100%)">
+    <h3>🎨 그림 고르기</h3>
+    <p class="hint">청소구역에 어울리는 그림을 톡 누르세요.</p>
+    <div class="epal" id="epal"></div>
+    <div class="row end"><button class="btn" id="btnCloseEmoji">닫기</button></div>
   </div>
 </div>
 
@@ -285,6 +352,11 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
       줄바꿈·쉼표·번호(1. 김민준)가 섞여 있어도 알아서 정리합니다.</p>
     <textarea id="inRoster" placeholder="김민준&#10;이서연&#10;박도윤&#10;…"></textarea>
     <p class="hint" id="rosterCount">0명</p>
+
+    <label class="f">🧹 청소구역</label>
+    <p class="hint">그림 · 이름 · <b>몇 명</b>이 맡는지를 적어주세요. 숙제를 못 낸 친구들이 여기로 배정됩니다.</p>
+    <div class="alist" id="alist"></div>
+    <div class="row"><button class="btn mini primary" id="btnAddArea">+ 청소구역 추가</button></div>
 
     <label class="f">📎 백업 코드 <span style="font-size:.8em;color:var(--pink)">← 다른 기기에서도 쓰려면</span></label>
     <p class="hint">이 앱은 <b>지금 쓰는 기기·브라우저 안에만</b> 저장돼요.<br>
@@ -332,6 +404,12 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
 
 <script>
 const KEY='hw_check_v1';
+const DEFAULT_AREAS=[
+  {id:'a1',emoji:'🧹',name:'교실 바닥',cap:2},
+  {id:'a2',emoji:'🪟',name:'창틀·유리',cap:1},
+  {id:'a3',emoji:'🗑️',name:'분리수거',cap:2},
+  {id:'a4',emoji:'📚',name:'책장 정리',cap:1}
+];
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const uid=()=>Math.random().toString(36).slice(2,9);
 
@@ -360,6 +438,10 @@ function normalize(d){
   if(!d.items.some(i=>i.id===d.active)) d.active=d.items[0]?d.items[0].id:null;
   d.numOnly=!!d.numOnly;
   d.animal = d.animal===undefined ? true : !!d.animal;
+  d.areas=(d.areas&&d.areas.length? d.areas : JSON.parse(JSON.stringify(DEFAULT_AREAS)))
+    .map(a=>({id:a.id||uid(), emoji:a.emoji||'🧹', name:a.name||'청소구역', cap:Math.max(1,+a.cap||1)}));
+  d.cleanHist=d.cleanHist||{};   // {학생id:[구역id, ...] 최근 순}
+  d.clean=d.clean||null;         // 마지막 배정 결과
   return d;
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
@@ -539,6 +621,144 @@ function parseRoster(text){
 }
 function rosterText(){ return S.students.map(s=>`${s.no}. ${s.name}`).join('\n'); }
 
+/* ── 청소 담당 정하기 ── */
+let cleanScope='item';   // 'item' = 이 항목 미제출자 / 'all' = 하나라도 밀린 친구
+
+function cleanTargets(scope){
+  if(scope==='all') return S.students.filter(s=>S.items.some(it=>!it.done[s.id]));
+  const it=item(); return it? todoOf(it) : [];
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+/* 저번에 했던 구역은 피한다: 이력에서 최근일수록 순위가 낮다 */
+function areaScore(sid, aid){
+  const h=S.cleanHist[sid]||[];
+  const i=h.indexOf(aid);
+  return i===-1 ? 99 : i;      // 한 번도 안 했으면 가장 좋은 점수
+}
+function assignClean(scope){
+  const targets=shuffle(cleanTargets(scope).slice());
+  const load={}; S.areas.forEach(a=>load[a.id]=[]);
+  if(!S.areas.length || !targets.length) return {by:load, targets};
+  targets.forEach(s=>{
+    const cand=S.areas.slice();
+    const open=cand.filter(a=>load[a.id].length < a.cap);
+    const pool=open.length? open : cand;             // 자리가 다 차면 골고루 더 넣는다
+    shuffle(pool);
+    pool.sort((a,b)=> areaScore(s.id,b.id)-areaScore(s.id,a.id) || load[a.id].length-load[b.id].length);
+    load[pool[0].id].push(s.id);
+  });
+  return {by:load, targets};
+}
+function doClean(scope){
+  const t=cleanTargets(scope);
+  if(!S.areas.length){ toast('먼저 ⚙️ 설정에서 청소구역을 넣어주세요 🙂'); return; }
+  if(!t.length){ toast('청소할 친구가 없어요 — 다 냈네요 🎉'); return; }
+  const {by}=assignClean(scope);
+  // 이력 기록(최근 3개만 기억)
+  Object.entries(by).forEach(([aid,list])=>list.forEach(sid=>{
+    const h=S.cleanHist[sid]||[]; h.unshift(aid); S.cleanHist[sid]=h.slice(0,3);
+  }));
+  S.clean={at:today(), scope, by};
+  save(); openClean();
+}
+function openClean(){
+  const c=S.clean; if(!c) return;
+  $('#cleanSub').textContent=(c.scope==='all'? '하나라도 못 낸 친구' : `「${(item()||{}).name||''}」 못 낸 친구`)
+    +' · '+c.at;
+  const box=$('#cleanBox'); box.innerHTML='';
+  S.areas.forEach(a=>{
+    const list=c.by[a.id]||[];
+    const d=document.createElement('div'); d.className='cbox';
+    d.innerHTML=`<h3>${a.emoji} ${esc(a.name)} <span>${list.length}/${a.cap}명</span></h3>`+
+      (list.length
+        ? `<div class="who">${list.map(id=>{const s=S.students.find(x=>x.id===id); return `<b>${esc(label(s))}</b>`;}).join('')}</div>`
+        : '<div class="none">오늘은 없어요 🙂</div>');
+    box.appendChild(d);
+  });
+  $('#cleanShow').classList.add('on');
+  fitClean();
+}
+function fitClean(){
+  const box=$('#cleanBox'); let sc=1;
+  box.style.setProperty('--sc',sc);
+  while(box.scrollHeight > box.clientHeight+2 && sc>0.5){
+    sc=Math.round((sc-0.05)*100)/100; box.style.setProperty('--sc',sc);
+  }
+}
+window.addEventListener('resize',()=>{ if($('#cleanShow').classList.contains('on')) fitClean(); });
+
+function drawCleanSeg(){
+  const seg=$('#cleanSeg'); seg.innerHTML='';
+  const it=item();
+  [['item', it? `「${it.name}」 못 낸 친구` : '이 항목', cleanTargets('item').length],
+   ['all', '하나라도 밀린 친구 전부', cleanTargets('all').length]].forEach(([k,lab,n])=>{
+    const b=document.createElement('button');
+    b.className=(cleanScope===k?'on':''); b.textContent=`${lab} ${n}명`;
+    b.onclick=()=>{ cleanScope=k; drawCleanSeg(); };
+    seg.appendChild(b);
+  });
+  const t=cleanTargets(cleanScope);
+  $('#cleanWho').innerHTML = t.length
+    ? `대상 <b>${t.length}명</b> : ${t.map(s=>esc(s.name)).join(', ')}`
+    : '대상이 없어요 — 모두 냈네요 🎉';
+}
+
+$('#btnClean').onclick=()=>{
+  if(!S.students.length){ toast('명렬표를 먼저 넣어주세요 🙂'); return; }
+  drawCleanSeg(); $('#mClean').classList.add('on');
+};
+$('#btnCancelClean').onclick=()=>$('#mClean').classList.remove('on');
+$('#btnDoClean').onclick=()=>{ $('#mClean').classList.remove('on'); doClean(cleanScope); };
+$('#btnCleanAgain').onclick=()=>doClean(S.clean? S.clean.scope : cleanScope);
+$('#btnCloseClean').onclick=()=>$('#cleanShow').classList.remove('on');
+$('#btnCleanCopy').onclick=async ()=>{
+  const c=S.clean; if(!c) return;
+  const txt='[오늘의 청소] '+c.at+'\n'+S.areas.map(a=>{
+    const list=(c.by[a.id]||[]).map(id=>{const s=S.students.find(x=>x.id===id); return s?s.name:'';});
+    return `${a.emoji} ${a.name} : ${list.length? list.join(', ') : '-'}`;
+  }).join('\n');
+  try{ await navigator.clipboard.writeText(txt); toast('청소 명단을 복사했어요 📋'); }
+  catch(e){ toast('복사가 안 됐어요 😢'); }
+};
+
+/* ── 청소구역 편집 ── */
+let draftAreas=[];
+function drawAreaRows(){
+  const box=$('#alist'); box.innerHTML='';
+  draftAreas.forEach((a,i)=>{
+    const row=document.createElement('div'); row.className='arow';
+    row.innerHTML=`<button class="pick" title="그림 고르기">${a.emoji}</button>`+
+      `<input class="n" type="text" maxlength="16" value="${esc(a.name)}">`+
+      `<label>몇 명</label><input class="num" type="number" min="1" max="12" value="${a.cap}">`+
+      `<button class="btn mini danger">삭제</button>`;
+    const [n,c]=row.querySelectorAll('input');
+    const pickBtn=row.querySelector('.pick');
+    pickBtn.onclick=()=>openEmoji(v=>{ a.emoji=v; pickBtn.textContent=v; });
+    n.oninput=()=>a.name=n.value;
+    c.oninput=()=>a.cap=Math.max(1,+c.value||1);
+    row.querySelectorAll('button')[1].onclick=()=>{ draftAreas.splice(i,1); drawAreaRows(); };
+    box.appendChild(row);
+  });
+  if(!draftAreas.length) box.innerHTML='<p class="hint">청소구역을 하나 이상 넣어주세요.</p>';
+}
+const EMOJI_PAL=['🧹','🧽','🪣','🧴','🪟','🚪','🗑️','♻️','📚','🪑','🖥️','🧻',
+  '🚽','🪞','🌱','🪴','👟','🧺','🍽️','🧊','🎒','🖍️','📦','🧯',
+  '⭐','🌈','🍀','🐻','🐰','🐤','🌻','🎨','🎵','🏫','🧼','🪥'];
+let emojiCb=null;
+function openEmoji(cb){
+  emojiCb=cb;
+  const box=$('#epal'); box.innerHTML='';
+  EMOJI_PAL.forEach(v=>{
+    const b=document.createElement('button'); b.textContent=v;
+    b.onclick=()=>{ if(emojiCb) emojiCb(v); $('#mEmoji').classList.remove('on'); };
+    box.appendChild(b);
+  });
+  $('#mEmoji').classList.add('on');
+}
+$('#btnCloseEmoji').onclick=()=>$('#mEmoji').classList.remove('on');
+$('#btnAddArea').onclick=()=>{ draftAreas.push({id:uid(),emoji:'🧹',name:'새 구역',cap:1}); drawAreaRows(); };
+
 /* ── 이벤트 ── */
 const swOf=id=>$(id).firstElementChild;
 $('#btnSetting').onclick=()=>{
@@ -548,6 +768,8 @@ $('#btnSetting').onclick=()=>{
   $('#inBackup').value='';
   swOf('#tgNumOnly').classList.toggle('on',S.numOnly);
   swOf('#tgAnimal').classList.toggle('on',S.animal);
+  draftAreas=JSON.parse(JSON.stringify(S.areas));
+  drawAreaRows();
   $('#mSetting').classList.add('on');
 };
 $('#inRoster').oninput=e=>{ $('#rosterCount').textContent=parseRoster(e.target.value).length+'명'; };
@@ -558,12 +780,16 @@ $('#btnSaveSetting').onclick=()=>{
   S.klass=$('#inKlass').value.trim()||'우리 반';
   S.numOnly=swOf('#tgNumOnly').classList.contains('on');
   S.animal =swOf('#tgAnimal').classList.contains('on');
+  S.areas=draftAreas.filter(a=>a.name.trim()).map(a=>({...a,name:a.name.trim()}));
+  if(!S.areas.length) S.areas=JSON.parse(JSON.stringify(DEFAULT_AREAS));
   const names=parseRoster($('#inRoster').value);
   // 이름이 같으면 기존 체크 상태를 이어받는다
   const oldByName={}; S.students.forEach(s=>{ if(!(s.name in oldByName)) oldByName[s.name]=s.id; });
   const next=names.map((n,i)=>({id:oldByName[n]||uid(), no:i+1, name:n}));
   const keep=new Set(next.map(s=>s.id));
   S.items.forEach(it=>{ Object.keys(it.done).forEach(k=>{ if(!keep.has(k)) delete it.done[k]; }); });
+  Object.keys(S.cleanHist).forEach(k=>{ if(!keep.has(k)) delete S.cleanHist[k]; });
+  S.clean=null;
   S.students=next;
   if(S.students.length && !S.items.length){
     S.items=[{id:uid(),name:'숙제',date:today(),done:{}}]; S.active=S.items[0].id;
@@ -573,8 +799,10 @@ $('#btnSaveSetting').onclick=()=>{
 function encodeBackup(){
   // 이름 목록 + 항목별 「제출한 사람 번호」만 담아 코드를 짧게 유지한다
   const idx={}; S.students.forEach((s,i)=>idx[s.id]=i);
-  const payload={v:2, k:S.klass, n:S.students.map(s=>s.name),
+  const payload={v:3, k:S.klass, n:S.students.map(s=>s.name),
     i:S.items.map(it=>({n:it.name, d:Object.keys(it.done).map(k=>idx[k]).filter(v=>v!==undefined)})),
+    a:S.areas.map(x=>[x.emoji,x.name,x.cap]),
+    h:S.students.map(s=>(S.cleanHist[s.id]||[]).map(aid=>S.areas.findIndex(x=>x.id===aid)).filter(v=>v>=0)),
     an:S.animal?1:0, no:S.numOnly?1:0};
   return btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/=+$/,'');
 }
@@ -587,7 +815,10 @@ function decodeBackup(code){
     const done={}; (it.d||[]).forEach(i=>{ if(students[i]) done[students[i].id]=1; });
     return {id:uid(), name:it.n||'숙제', date:today(), done};
   });
-  return {k:d.k, st:students, it:items, an:!!d.an, no:!!d.no};
+  const areas=(d.a||[]).map(x=>({id:uid(), emoji:x[0]||'🧹', name:x[1]||'청소구역', cap:+x[2]||1}));
+  const cleanHist={};
+  (d.h||[]).forEach((hs,i)=>{ if(students[i]) cleanHist[students[i].id]=hs.map(k=>(areas[k]||{}).id).filter(Boolean); });
+  return {k:d.k, st:students, it:items, an:!!d.an, no:!!d.no, areas, cleanHist};
 }
 $('#btnCopyBackup').onclick=async ()=>{
   if(!S.students.length){ toast('먼저 명렬표를 저장해 주세요 🙂'); return; }
@@ -601,7 +832,8 @@ $('#btnRestore').onclick=()=>{
   if(!code){ toast('먼저 코드를 붙여넣어 주세요 🙂'); return; }
   let d; try{ d=decodeBackup(code); }catch(e){ toast('코드가 올바르지 않아요 😢'); return; }
   if(!confirm(`「${d.k||'우리 반'}」 ${d.st.length}명으로 되살릴까요?\n지금 화면의 내용은 사라져요.`)) return;
-  S=normalize({klass:d.k, students:d.st, items:d.it, animal:d.an, numOnly:d.no});
+  S=normalize({klass:d.k, students:d.st, items:d.it, animal:d.an, numOnly:d.no,
+               areas:d.areas&&d.areas.length? d.areas : null, cleanHist:d.cleanHist});
   save(); render(); $('#mSetting').classList.remove('on');
   toast('되살렸어요! 🎉');
 };
@@ -643,7 +875,7 @@ $('#btnCopy').onclick=async ()=>{
 
 $$('.modal').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('on'); }));
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){ closeShow(); $$('.modal').forEach(m=>m.classList.remove('on')); }
+  if(e.key==='Escape'){ closeShow(); $('#cleanShow').classList.remove('on'); $$('.modal').forEach(m=>m.classList.remove('on')); }
 });
 
 let toastTimer;
