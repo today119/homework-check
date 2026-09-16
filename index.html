@@ -110,6 +110,12 @@ main{padding:8px 12px 120px}
 .stu.done .nm{text-decoration:line-through; color:var(--sub)}
 .stu.done .an{filter:grayscale(.7)}
 .stu.done::after{content:'🌟'}
+/* 「걸린 것」 항목 — 체크하면 걸린 친구(빨강), 안 한 친구는 조용히 */
+.stu.ok{opacity:.55; background:#f7faf8; border-color:#e2eae5}
+.stu.ok .nm{color:var(--sub)}
+.stu.caught{border-color:#f39191; background:#fff4f4}
+.stu.caught .nm{color:#d9534f}
+.stu.caught::after{content:'🙊'}
 
 /* ── 아래 고정 바 ── */
 .dock{
@@ -243,6 +249,9 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
 .itemrow{display:flex; gap:8px; align-items:center}
 .itemrow .ic{font-size:22px; flex:0 0 auto}
 .itemrow input{flex:1}
+.itemrow .kind{flex:0 0 auto; border:2px solid var(--line); border-radius:12px; background:#fff;
+  padding:.45em .6em; font-size:clamp(12px,1.5vh,15px); white-space:nowrap}
+.itemrow .kind.mark{border-color:#f3b1b1; background:#fff4f4; color:#d9534f}
 .mini{font-size:clamp(13px,1.6vh,16px); padding:.5em .7em; border-radius:12px}
 .empty{text-align:center; color:var(--sub); padding:8vh 8px; font-size:clamp(16px,2.2vh,22px); line-height:1.7}
 .empty svg{width:min(230px,58vw); margin-bottom:1.2em}
@@ -323,6 +332,7 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
   <div class="sub" id="cleanSub"></div>
   <div class="clean" id="cleanBox"></div>
   <div class="foot">
+    <button class="btn" id="btnCleanMore">➕ 걸린 친구 더 넣기</button>
     <button class="btn" id="btnCleanAgain">🎲 다시 뽑기</button>
     <button class="btn" id="btnCleanCopy">📋 명단 복사</button>
     <button class="btn primary" id="btnCloseClean">닫기</button>
@@ -333,15 +343,19 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
 <div class="modal" id="mClean">
   <div class="sheet">
     <h3>🧹 청소 담당 정하기</h3>
-    <p class="hint">오늘 못 낸 친구들에게 청소구역을 나눠줍니다.<br>
-      <b>저번에 했던 구역은 피해서</b> 돌아가며 배정돼요.</p>
+    <p class="hint">숙제를 못 냈거나 🙊걸린 친구들에게 청소구역을 나눠줍니다.
+      <b>저번에 했던 구역은 피해서</b> 돌아가며 배정돼요.<br>
+      수업 중에 또 걸린 친구가 생기면 <b>「➕ 이어서 더하기」</b> — 이미 정해진 친구는 그대로 두고 <b>새 친구만</b> 들어갑니다.</p>
     <div class="seg" id="cleanSeg"></div>
     <p class="hint" id="cleanWho"></p>
-    <p class="hint">이름을 눌러 <b>넣거나 뺄 수 있어요.</b> 숙제와 상관없이 청소할 친구도 넣으세요 🙂</p>
+    <p class="hint">이름을 눌러 <b>넣거나 뺄 수 있어요.</b> 숙제와 상관없이 청소할 친구도 넣으세요 🙂<br>
+      이름 위 <b>⚠️2개</b>는 「안 낸 것·걸린 것」이 몇 가지인지예요.</p>
     <div class="pickgrid" id="cleanStus" style="margin-bottom:6px"></div>
     <div class="row end">
       <button class="btn" id="btnCancelClean">취소</button>
-      <button class="btn primary" id="btnDoClean">🧹 정하기</button>
+      <div class="spacer"></div>
+      <button class="btn green" id="btnAddClean" hidden>➕ 이어서 더하기</button>
+      <button class="btn primary" id="btnDoClean">🧹 새로 정하기</button>
     </div>
   </div>
 </div>
@@ -424,9 +438,13 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
     <h3>📚 확인할 것</h3>
     <p class="hint">숙제, 학습지, 알림장 사인처럼 확인할 것을 만들어 두세요. 이름은 눌러서 고칠 수 있어요.<br>
       이름에 따라 <b>어울리는 그림</b>이 저절로 붙습니다 (숙제 📒 · 학습지 ✏️ · 알림장 📮 · 독서 📚 · 일기 📔)</p>
+    <p class="hint">항목은 두 가지예요. 오른쪽 <b>📗/🙊 단추</b>를 눌러 바꿀 수 있어요.<br>
+      📗 <b>내는 것</b> — 체크하면 「냈다」 (숙제·준비물)<br>
+      🙊 <b>걸린 것</b> — 체크하면 「걸렸다」 (떠듦·금지어). <b>체크한 친구가 청소 대상</b>이 됩니다.</p>
     <div class="itemlist" id="itemList"></div>
     <div class="row">
-      <button class="btn primary" id="btnAddItem">+ 새로 만들기</button>
+      <button class="btn primary" id="btnAddItem">📗 내는 것 만들기</button>
+      <button class="btn" id="btnAddMark">🙊 걸린 것 만들기</button>
       <div class="spacer"></div>
       <button class="btn" id="btnCloseItems">닫기</button>
     </div>
@@ -451,7 +469,14 @@ const animalOf=s=>ANIMALS[(s.no-1)%ANIMALS.length];
 const ICONS=[[/알림장|사인|확인서|가정통신/,'📮'],[/학습지|문제집|수학|익힘/,'✏️'],[/독서|책|도서/,'📚'],
   [/일기|글쓰기|글짓기/,'📔'],[/준비물|가져/,'🎒'],[/줄넘기|체육|운동/,'⚽'],[/그림|미술|만들기/,'🎨'],
   [/악기|음악|리코더/,'🎵'],[/제출|신청|서류/,'📄'],[/숙제|과제/,'📒']];
-function itemIcon(name){ for(const [re,ic] of ICONS) if(re.test(name)) return ic; return '📌'; }
+const MARK_ICONS=[[/떠들|떠듦|수다|시끄/,'🙊'],[/금지어|욕|비속어|나쁜 ?말/,'🤐'],[/지각|늦/,'⏰'],
+  [/다툼|싸움|장난/,'⚡'],[/청소|정리/,'🧹']];
+function itemIcon(name, kind){
+  if(kind==='mark'){ for(const [re,ic] of MARK_ICONS) if(re.test(name)) return ic; return '🙊'; }
+  for(const [re,ic] of ICONS) if(re.test(name)) return ic;
+  return '📌';
+}
+const iconOf=it=>itemIcon(it.name, it.kind);
 
 let S=load();
 
@@ -465,7 +490,9 @@ function load(){
 function normalize(d){
   d.klass=d.klass||'우리 반';
   d.students=(d.students||[]).map((s,i)=>({id:s.id||uid(), no:s.no||i+1, name:s.name||''}));
-  d.items=(d.items||[]).map(it=>({id:it.id||uid(), name:it.name||'숙제', date:it.date||today(), done:it.done||{}}));
+  /* kind: 'todo' = 내는 것(체크=완료) · 'mark' = 걸린 것(체크=걸림, 떠듦·금지어 등) */
+  d.items=(d.items||[]).map(it=>({id:it.id||uid(), name:it.name||'숙제', date:it.date||today(),
+    kind: it.kind==='mark'?'mark':'todo', done:it.done||{}}));
   if(!d.items.some(i=>i.id===d.active)) d.active=d.items[0]?d.items[0].id:null;
   d.numOnly=!!d.numOnly;
   d.animal = d.animal===undefined ? true : !!d.animal;
@@ -478,7 +505,10 @@ function normalize(d){
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 function today(){ const t=new Date(); return `${t.getMonth()+1}/${t.getDate()}`; }
 const item=()=>S.items.find(i=>i.id===S.active)||null;
-const todoOf=it=>S.students.filter(s=>!it.done[s.id]);
+const isMark=it=>it&&it.kind==='mark';
+/* 이름이 뜨는 친구 — 내는 것은 「안 낸 친구」, 걸린 것은 「걸린 친구」 */
+const flagged=(s,it)=> isMark(it) ? !!it.done[s.id] : !it.done[s.id];
+const todoOf=it=>S.students.filter(s=>flagged(s,it));
 const label=s=>S.numOnly? s.no+'번' : s.name;
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -492,7 +522,7 @@ function render(){
     const b=document.createElement('button');
     b.className='tab'+(it.id===S.active?' on':'');
     const n=todoOf(it).length;
-    b.innerHTML=`${itemIcon(it.name)} ${esc(it.name)}<span class="n">${n?n+'명':'✅'}</span>`;
+    b.innerHTML=`${iconOf(it)} ${esc(it.name)}<span class="n">${n?n+'명':'✅'}</span>`;
     b.onclick=()=>{ S.active=it.id; save(); render(); };
     tabs.appendChild(b);
   });
@@ -518,10 +548,11 @@ function render(){
 
   // 학생 카드
   const g=$('#grid');
+  const mk=isMark(it);
   S.students.forEach(s=>{
     const done=!!it.done[s.id];
     const b=document.createElement('button');
-    b.className='stu '+(done?'done':'todo');
+    b.className='stu '+(mk ? (done?'caught':'ok') : (done?'done':'todo'));
     b.innerHTML=(S.animal?`<div class="an">${animalOf(s)}</div>`:'')+
       `<div class="no">${s.no}번</div><div class="nm">${esc(s.name)}</div>`;
     b.onclick=()=>{ if(done) delete it.done[s.id]; else it.done[s.id]=1; save(); render(); };
@@ -535,7 +566,11 @@ function render(){
   const face=$('#barFace');
   face.style.left=Math.max(4,Math.min(96,pct))+'%';
   face.textContent = pct>=100 ? '🎉' : pct>=60 ? '🐥' : '🐣';
-  $('#cntTodo').innerHTML = todo ? `아직 <b>${todo}</b>명` : `모두 냈어요 <b>🎉</b>`;
+  $('#cntTodo').innerHTML = mk
+    ? (todo ? `걸린 친구 <b>${todo}</b>명` : `아무도 없어요 <b>🎉</b>`)
+    : (todo ? `아직 <b>${todo}</b>명` : `모두 냈어요 <b>🎉</b>`);
+  /* 「걸린 것」 항목에선 "모두 냈어요"(전원 체크)가 위험하다 — 대신 지우기로 */
+  $('#btnAllDone').textContent = mk ? '걸린 친구 지우기' : '모두 냈어요';
 }
 
 function svgEmptyDesk(){
@@ -578,20 +613,20 @@ function drawShow(){
 
   if(tableMode){
     const its=S.items;
-    const rows=S.students.filter(s=>its.some(i=>!i.done[s.id]));
+    const rows=S.students.filter(s=>its.some(i=>flagged(s,i)));
     $('#showTitle').innerHTML= rows.length
       ? `한눈에 보기 — <span>${rows.length}명</span>` : '한눈에 보기';
     $('#showSub').textContent= rows.length
-      ? '아직 안 낸 것이 있는 친구만 모았어요 (✗ 표시가 안 낸 것)' : '';
+      ? '안 낸 것 · 걸린 것이 있는 친구만 모았어요 (✗ 표시)' : '';
     if(!rows.length){
       confettiOn();
       $('#showTable').innerHTML=`<div class="allclear"><div class="emo">🎉</div><div class="txt">밀린 친구가 한 명도 없어요!</div></div>`;
       return;
     }
     confettiOff();
-    let h='<table><thead><tr><th>이름</th>'+its.map(i=>`<th>${itemIcon(i.name)} ${esc(i.name)}</th>`).join('')+'</tr></thead><tbody>';
+    let h='<table><thead><tr><th>이름</th>'+its.map(i=>`<th>${iconOf(i)} ${esc(i.name)}</th>`).join('')+'</tr></thead><tbody>';
     rows.forEach(s=>{
-      const cells=its.map(i=>i.done[s.id]?'<td class="o">·</td>':'<td class="x">✗</td>');
+      const cells=its.map(i=>flagged(s,i)?'<td class="x">✗</td>':'<td class="o">·</td>');
       const an=S.animal? animalOf(s)+' ' : '';
       h+=`<tr class="hasx"><td>${an}${s.no}. ${esc(label(s))}</td>${cells.join('')}</tr>`;
     });
@@ -600,15 +635,16 @@ function drawShow(){
     return;
   }
 
-  const todo=todoOf(it);
+  const todo=todoOf(it), mk=isMark(it);
   $('#showTitle').innerHTML= todo.length
-    ? `${itemIcon(it.name)} ${esc(it.name)} — 아직 <span>${todo.length}명</span>`
-    : `${itemIcon(it.name)} ${esc(it.name)}`;
-  $('#showSub').textContent= todo.length? '이름이 보이면 오늘 안에 꼭 내주세요!' : '';
+    ? `${iconOf(it)} ${esc(it.name)} — ${mk?'걸린':'아직'} <span>${todo.length}명</span>`
+    : `${iconOf(it)} ${esc(it.name)}`;
+  $('#showSub').textContent= todo.length
+    ? (mk? '오늘 청소 담당이 될 수 있어요!' : '이름이 보이면 오늘 안에 꼭 내주세요!') : '';
   const box=$('#showNames');
   if(!todo.length){
     confettiOn();
-    box.innerHTML=`<div class="allclear"><div class="emo">🎉</div><div class="txt">우리 반 모두 다 했어요!</div></div>`;
+    box.innerHTML=`<div class="allclear"><div class="emo">🎉</div><div class="txt">${mk?'오늘은 걸린 친구가 없어요!':'우리 반 모두 다 했어요!'}</div></div>`;
   }else{
     confettiOff();
     box.innerHTML=todo.map(s=>`<b>${S.animal?`<i>${animalOf(s)}</i>`:''}${esc(label(s))}</b>`).join('');
@@ -622,16 +658,24 @@ function drawItems(){
   if(!S.items.length){ box.innerHTML='<p class="hint">아직 없어요. 아래에서 만들어 주세요.</p>'; }
   S.items.forEach(it=>{
     const row=document.createElement('div'); row.className='itemrow';
-    const ic=document.createElement('span'); ic.className='ic'; ic.textContent=itemIcon(it.name);
+    const ic=document.createElement('span'); ic.className='ic'; ic.textContent=iconOf(it);
     const inp=document.createElement('input'); inp.type='text'; inp.value=it.name; inp.maxLength=20;
-    inp.oninput=()=>{ it.name=inp.value; ic.textContent=itemIcon(it.name); save(); render(); };
+    inp.oninput=()=>{ it.name=inp.value; ic.textContent=iconOf(it); save(); render(); };
+    const kind=document.createElement('button');
+    const drawKind=()=>{
+      kind.className='kind'+(isMark(it)?' mark':'');
+      kind.textContent=isMark(it)?'🙊 걸린 것':'📗 내는 것';
+      ic.textContent=iconOf(it);
+    };
+    kind.onclick=()=>{ it.kind=isMark(it)?'todo':'mark'; drawKind(); save(); render(); };
+    drawKind();
     const del=document.createElement('button'); del.className='btn mini danger'; del.textContent='삭제';
     del.onclick=()=>{
       S.items=S.items.filter(x=>x.id!==it.id);
       if(S.active===it.id) S.active=S.items[0]?S.items[0].id:null;
       save(); drawItems(); render();
     };
-    row.append(ic,inp,del); box.appendChild(row);
+    row.append(ic,inp,kind,del); box.appendChild(row);
   });
 }
 
@@ -657,7 +701,8 @@ let cleanScope='item';   // 'item' = 이 항목 미제출자 / 'all' = 하나라
 let cleanPick=new Set();  // 실제 청소 대상(선생님이 자유롭게 넣고 뺀다)
 
 function cleanTargets(scope){
-  if(scope==='all') return S.students.filter(s=>S.items.some(it=>!it.done[s.id]));
+  /* 'all' = 안 낸 것이든 걸린 것이든 하나라도 있는 친구 */
+  if(scope==='all') return S.students.filter(s=>S.items.some(it=>flagged(s,it)));
   const it=item(); return it? todoOf(it) : [];
 }
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
@@ -668,9 +713,9 @@ function areaScore(sid, aid){
   const i=h.indexOf(aid);
   return i===-1 ? 99 : i;      // 한 번도 안 했으면 가장 좋은 점수
 }
-function assignClean(list){
+function assignClean(list, base){
   const targets=shuffle(list.slice());
-  const load={}; S.areas.forEach(a=>load[a.id]=[]);
+  const load={}; S.areas.forEach(a=>load[a.id]=(base&&base[a.id]? base[a.id].slice():[]));
   if(!S.areas.length || !targets.length) return {by:load, targets};
   targets.forEach(s=>{
     const cand=S.areas.slice();
@@ -682,16 +727,24 @@ function assignClean(list){
   });
   return {by:load, targets};
 }
-function doClean(){
-  const t=S.students.filter(s=>cleanPick.has(s.id));
+/* mode='new' 새로 정하기 / mode='add' 이미 정해진 배정은 그대로 두고 새로 걸린 친구만 덧붙이기 */
+function doClean(mode){
   if(!S.areas.length){ toast('먼저 ⚙️ 설정에서 청소구역을 넣어주세요 🙂'); return; }
-  if(!t.length){ toast('청소할 친구를 골라주세요 🙂'); return; }
-  const {by}=assignClean(t);
-  // 이력 기록(최근 3개만 기억)
+  const keep = mode==='add' && S.clean && S.clean.at===today() ? S.clean.by : null;
+  const already=new Set();
+  if(keep) Object.values(keep).forEach(l=>(l||[]).forEach(id=>already.add(id)));
+  const t=S.students.filter(s=>cleanPick.has(s.id) && !already.has(s.id));
+  if(!t.length){
+    if(keep){ toast('새로 더할 친구가 없어요 🙂'); openClean(); return; }
+    toast('청소할 친구를 골라주세요 🙂'); return;
+  }
+  const {by}=assignClean(t, keep);
+  // 이력 기록(최근 3개만 기억) — 이번에 새로 들어간 친구만
   Object.entries(by).forEach(([aid,list])=>list.forEach(sid=>{
+    if(already.has(sid)) return;
     const h=S.cleanHist[sid]||[]; h.unshift(aid); S.cleanHist[sid]=h.slice(0,3);
   }));
-  S.clean={at:today(), n:t.length, by};
+  S.clean={at:today(), n:already.size+t.length, by};
   save(); openClean();
 }
 function openClean(){
@@ -723,39 +776,60 @@ window.addEventListener('resize',()=>{ if($('#cleanShow').classList.contains('on
 function drawCleanSeg(){
   const seg=$('#cleanSeg'); seg.innerHTML='';
   const it=item();
-  [['item', it? `「${it.name}」 못 낸 친구` : '이 항목', cleanTargets('item').length],
-   ['all', '하나라도 밀린 친구 전부', cleanTargets('all').length]].forEach(([k,lab,n])=>{
+  [['item', it? `「${it.name}」 ${isMark(it)?'걸린':'못 낸'} 친구` : '이 항목', cleanTargets('item').length],
+   ['all', '밀린·걸린 친구 전부', cleanTargets('all').length]].forEach(([k,lab,n])=>{
     const b=document.createElement('button');
     b.className=(cleanScope===k?'on':''); b.textContent=`${lab} ${n}명 다시 고르기`;
     b.onclick=()=>{ cleanScope=k; cleanPick=new Set(cleanTargets(k).map(s=>s.id)); drawCleanSeg(); };
     seg.appendChild(b);
   });
 
+  const done=assignedToday();                       /* 오늘 이미 청소로 정해진 친구 */
   const chosen=S.students.filter(s=>cleanPick.has(s.id));
+  const added=chosen.filter(s=>!done.has(s.id));
   $('#cleanWho').innerHTML = chosen.length
     ? `청소할 친구 <b>${chosen.length}명</b> : ${chosen.map(s=>esc(s.name)).join(', ')}`
+      + (done.size? `<br>이미 정해진 <b>${done.size}명</b> · 새로 더할 <b>${added.length}명</b>` : '')
     : '아직 아무도 안 골랐어요. 아래에서 이름을 눌러주세요 🙂';
+  const addBtn=$('#btnAddClean');
+  addBtn.hidden = !done.size;
+  addBtn.textContent = `➕ 이어서 더하기${added.length? ` (${added.length}명)`:''}`;
 
   const box=$('#cleanStus'); box.innerHTML='';
   S.students.forEach(s=>{
     const on=cleanPick.has(s.id);
+    const cnt=S.items.filter(it=>flagged(s,it)).length;      /* 안 낸 것·걸린 것 가짓수 */
     const b=document.createElement('button');
     b.className='stu '+(on?'sel':'off');
     b.innerHTML=(S.animal?`<div class="an">${animalOf(s)}</div>`:'')+
-      `<div class="no">${s.no}번</div><div class="nm">${esc(s.name)}</div>`;
+      `<div class="no">${done.has(s.id)?'🧹 하는 중':cnt?`⚠️${cnt}개`:s.no+'번'}</div><div class="nm">${esc(s.name)}</div>`;
     b.onclick=()=>{ on? cleanPick.delete(s.id) : cleanPick.add(s.id); drawCleanSeg(); };
     box.appendChild(b);
   });
 }
+/* 오늘 이미 청소로 정해진 친구들 */
+function assignedToday(){
+  const set=new Set();
+  if(S.clean && S.clean.at===today()) Object.values(S.clean.by||{}).forEach(l=>(l||[]).forEach(id=>set.add(id)));
+  return set;
+}
 
-$('#btnClean').onclick=()=>{
+function openCleanPick(){
   if(!S.students.length){ toast('명렬표를 먼저 넣어주세요 🙂'); return; }
-  if(!cleanPick.size) cleanPick=new Set(cleanTargets(cleanScope).map(s=>s.id));
+  /* 오늘 걸린 친구 + 이미 청소로 정해진 친구를 기본으로 골라둔다 */
+  cleanPick=new Set(cleanTargets(cleanScope).map(s=>s.id));
+  assignedToday().forEach(id=>cleanPick.add(id));
   drawCleanSeg(); $('#mClean').classList.add('on');
-};
+}
+$('#btnClean').onclick=openCleanPick;
+$('#btnCleanMore').onclick=()=>{ $('#cleanShow').classList.remove('on'); openCleanPick(); };
 $('#btnCancelClean').onclick=()=>$('#mClean').classList.remove('on');
-$('#btnDoClean').onclick=()=>{ $('#mClean').classList.remove('on'); doClean(); };
-$('#btnCleanAgain').onclick=()=>doClean();
+$('#btnDoClean').onclick=()=>{ $('#mClean').classList.remove('on'); doClean('new'); };
+$('#btnAddClean').onclick=()=>{ $('#mClean').classList.remove('on'); doClean('add'); };
+$('#btnCleanAgain').onclick=()=>{
+  assignedToday().forEach(id=>cleanPick.add(id));
+  doClean('new');
+};
 $('#btnCloseClean').onclick=()=>$('#cleanShow').classList.remove('on');
 $('#btnCleanCopy').onclick=async ()=>{
   const c=S.clean; if(!c) return;
@@ -875,7 +949,8 @@ function encodeBackup(){
   // 이름 목록 + 항목별 「제출한 사람 번호」만 담아 코드를 짧게 유지한다
   const idx={}; S.students.forEach((s,i)=>idx[s.id]=i);
   const payload={v:3, k:S.klass, n:S.students.map(s=>s.name),
-    i:S.items.map(it=>({n:it.name, d:Object.keys(it.done).map(k=>idx[k]).filter(v=>v!==undefined)})),
+    i:S.items.map(it=>({n:it.name, t:isMark(it)?1:0,
+      d:Object.keys(it.done).map(k=>idx[k]).filter(v=>v!==undefined)})),
     a:S.areas.map(x=>[x.emoji,x.name,x.cap]),
     h:S.students.map(s=>(S.cleanHist[s.id]||[]).map(aid=>S.areas.findIndex(x=>x.id===aid)).filter(v=>v>=0)),
     an:S.animal?1:0, no:S.numOnly?1:0};
@@ -888,7 +963,7 @@ function decodeBackup(code){
   const students=d.n.map((name,i)=>({id:uid(), no:i+1, name:String(name)}));
   const items=(d.i||[]).map(it=>{
     const done={}; (it.d||[]).forEach(i=>{ if(students[i]) done[students[i].id]=1; });
-    return {id:uid(), name:it.n||'숙제', date:today(), done};
+    return {id:uid(), name:it.n||'숙제', date:today(), kind:it.t?'mark':'todo', done};
   });
   const areas=(d.a||[]).map(x=>({id:uid(), emoji:x[0]||'🧹', name:x[1]||'청소구역', cap:+x[2]||1}));
   const cleanHist={};
@@ -918,12 +993,14 @@ $('#btnWipe').onclick=()=>{
   S=normalize({}); save(); render(); $('#mSetting').classList.remove('on');
 };
 
-$('#btnAddItem').onclick=()=>{
-  const it={id:uid(),name:'새 항목',date:today(),done:{}};
+function addItem(kind){
+  const it={id:uid(), name: kind==='mark'?'떠듦':'새 항목', date:today(), kind, done:{}};
   S.items.push(it); S.active=it.id; save(); drawItems(); render();
   const inputs=$$('#itemList input'); const last=inputs[inputs.length-1];
   if(last){ last.focus(); last.select(); }
-};
+}
+$('#btnAddItem').onclick=()=>addItem('todo');
+$('#btnAddMark').onclick=()=>addItem('mark');
 $('#btnCloseItems').onclick=()=>$('#mItems').classList.remove('on');
 
 $('#btnShow').onclick=openShow;
@@ -931,6 +1008,7 @@ $('#btnCloseShow').onclick=closeShow;
 $('#btnTableMode').onclick=()=>{ tableMode=!tableMode; drawShow(); };
 $('#btnAllDone').onclick=()=>{
   const it=item(); if(!it) return;
+  if(isMark(it)){ it.done={}; save(); render(); return; }   /* 걸린 것 → 전원 해제 */
   S.students.forEach(s=>it.done[s.id]=1); save(); render();
 };
 $('#btnReset').onclick=()=>{
@@ -940,10 +1018,10 @@ $('#btnReset').onclick=()=>{
 };
 $('#btnCopy').onclick=async ()=>{
   const it=item(); if(!it) return;
-  const todo=todoOf(it);
+  const todo=todoOf(it), mk=isMark(it);
   const txt = todo.length
-    ? `[${it.name}] 아직 안 낸 친구 ${todo.length}명\n`+todo.map(s=>`${s.no}. ${s.name}`).join('\n')
-    : `[${it.name}] 모두 냈습니다 🎉`;
+    ? `[${it.name}] ${mk?'걸린 친구':'아직 안 낸 친구'} ${todo.length}명\n`+todo.map(s=>`${s.no}. ${s.name}`).join('\n')
+    : `[${it.name}] ${mk?'걸린 친구가 없습니다 🎉':'모두 냈습니다 🎉'}`;
   try{ await navigator.clipboard.writeText(txt); toast('명단을 복사했어요 📋'); }
   catch(e){ toast('복사가 안 됐어요 😢'); }
 };
@@ -971,7 +1049,7 @@ if(!S.students.length) $('#btnSetting').click();
 <script>
 /* 새 버전이 올라오면 브라우저가 옛 화면을 붙들고 있지 않도록 스스로 다시 받아온다 */
 (function(){
-  var APP_VER = "20260910-0936";
+  var APP_VER = "20260916-1404";
   try{
     fetch("version.txt?t=" + Date.now(), {cache:"no-store"})
       .then(function(r){ return r.ok ? r.text() : ""; })
