@@ -249,6 +249,11 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
 .itemrow{display:flex; gap:8px; align-items:center}
 .itemrow .ic{font-size:22px; flex:0 0 auto}
 .itemrow input{flex:1}
+.itemrow .ord{display:flex; flex-direction:column; gap:2px; flex:0 0 auto}
+.itemrow .ord button{border:2px solid var(--line); border-radius:9px; background:#fff;
+  width:2.1em; line-height:1.15; font-size:clamp(11px,1.4vh,14px); padding:.15em 0; color:var(--sub)}
+.itemrow .ord button:active{background:#f3efff}
+.itemrow .ord button:disabled{opacity:.3; pointer-events:none}
 .itemrow .kind{flex:0 0 auto; border:2px solid var(--line); border-radius:12px; background:#fff;
   padding:.45em .6em; font-size:clamp(12px,1.5vh,15px); white-space:nowrap}
 .itemrow .kind.mark{border-color:#f3b1b1; background:#fff4f4; color:#d9534f}
@@ -438,6 +443,7 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
     <h3>📚 확인할 것</h3>
     <p class="hint">숙제, 학습지, 알림장 사인처럼 확인할 것을 만들어 두세요. 이름은 눌러서 고칠 수 있어요.<br>
       이름에 따라 <b>어울리는 그림</b>이 저절로 붙습니다 (숙제 📒 · 학습지 ✏️ · 알림장 📮 · 독서 📚 · 일기 📔)</p>
+    <p class="hint">왼쪽 <b>▲▼</b>로 <b>순서</b>를 바꿀 수 있어요. 위에 있는 항목이 화면에서도 앞에 옵니다.</p>
     <p class="hint">항목은 두 가지예요. 오른쪽 <b>📗/🙊 단추</b>를 눌러 바꿀 수 있어요.<br>
       📗 <b>내는 것</b> — 체크하면 「냈다」 (숙제·준비물)<br>
       🙊 <b>걸린 것</b> — 체크하면 「걸렸다」 (떠듦·금지어). <b>체크한 친구가 청소 대상</b>이 됩니다.</p>
@@ -656,8 +662,15 @@ function openItems(){ drawItems(); $('#mItems').classList.add('on'); }
 function drawItems(){
   const box=$('#itemList'); box.innerHTML='';
   if(!S.items.length){ box.innerHTML='<p class="hint">아직 없어요. 아래에서 만들어 주세요.</p>'; }
-  S.items.forEach(it=>{
+  S.items.forEach((it,i)=>{
     const row=document.createElement('div'); row.className='itemrow';
+    /* 순서 바꾸기 — 탭 순서가 그대로 바뀐다 */
+    const ord=document.createElement('div'); ord.className='ord';
+    const up=document.createElement('button'); up.textContent='▲'; up.title='위로';
+    const dn=document.createElement('button'); dn.textContent='▼'; dn.title='아래로';
+    up.disabled=(i===0); dn.disabled=(i===S.items.length-1);
+    up.onclick=()=>moveItem(i,-1); dn.onclick=()=>moveItem(i,1);
+    ord.append(up,dn);
     const ic=document.createElement('span'); ic.className='ic'; ic.textContent=iconOf(it);
     const inp=document.createElement('input'); inp.type='text'; inp.value=it.name; inp.maxLength=20;
     inp.oninput=()=>{ it.name=inp.value; ic.textContent=iconOf(it); save(); render(); };
@@ -675,8 +688,14 @@ function drawItems(){
       if(S.active===it.id) S.active=S.items[0]?S.items[0].id:null;
       save(); drawItems(); render();
     };
-    row.append(ic,inp,kind,del); box.appendChild(row);
+    row.append(ord,ic,inp,kind,del); box.appendChild(row);
   });
+}
+function moveItem(i,dir){
+  const j=i+dir;
+  if(j<0||j>=S.items.length) return;
+  [S.items[i],S.items[j]]=[S.items[j],S.items[i]];
+  save(); drawItems(); render();
 }
 
 /* ── 명렬표 파싱 ── */
@@ -1049,7 +1068,7 @@ if(!S.students.length) $('#btnSetting').click();
 <script>
 /* 새 버전이 올라오면 브라우저가 옛 화면을 붙들고 있지 않도록 스스로 다시 받아온다 */
 (function(){
-  var APP_VER = "20260916-1404";
+  var APP_VER = "20260918-0952";
   try{
     fetch("version.txt?t=" + Date.now(), {cache:"no-store"})
       .then(function(r){ return r.ok ? r.text() : ""; })
