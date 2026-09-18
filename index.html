@@ -201,6 +201,9 @@ tr.hasx td:first-child{color:#c9741c}
 .epal{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;margin-top:.4em}
 .epal button{font-size:30px;line-height:1;padding:.32em 0;border-radius:14px;border:2px solid var(--line);background:#fff}
 .epal button:active{transform:scale(.92)}
+.epal-t{margin:.9em 0 -.1em; font-size:clamp(14px,1.8vh,18px); color:var(--sub)}
+.itemrow .ic{border:2px solid var(--line); border-radius:12px; background:#fff; padding:.15em .35em}
+.itemrow .ic:active{transform:scale(.92)}
 .seg{display:flex;gap:8px;flex-wrap:wrap;margin:.6em 0 .2em}
 .seg button{border:2px solid var(--line);border-radius:14px;padding:.5em .9em;background:#fff;
   font-size:clamp(15px,1.9vh,20px);color:var(--sub)}
@@ -383,9 +386,13 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
 <div class="modal" id="mEmoji">
   <div class="sheet" style="width:min(560px,100%)">
     <h3>🎨 그림 고르기</h3>
-    <p class="hint">청소구역에 어울리는 그림을 톡 누르세요.</p>
-    <div class="epal" id="epal"></div>
-    <div class="row end"><button class="btn" id="btnCloseEmoji">닫기</button></div>
+    <p class="hint" id="emojiHint">어울리는 그림을 톡 누르세요.</p>
+    <div id="epalWrap"></div>
+    <div class="row end">
+      <button class="btn mini" id="btnEmojiAuto" hidden>↩️ 자동으로</button>
+      <div class="spacer"></div>
+      <button class="btn" id="btnCloseEmoji">닫기</button>
+    </div>
   </div>
 </div>
 
@@ -442,7 +449,7 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
   <div class="sheet">
     <h3>📚 확인할 것</h3>
     <p class="hint">숙제, 학습지, 알림장 사인처럼 확인할 것을 만들어 두세요. 이름은 눌러서 고칠 수 있어요.<br>
-      이름에 따라 <b>어울리는 그림</b>이 저절로 붙습니다 (숙제 📒 · 학습지 ✏️ · 알림장 📮 · 독서 📚 · 일기 📔)</p>
+      이름에 따라 <b>어울리는 그림</b>이 저절로 붙고, 그림을 <b>누르면 직접 고를 수</b> 있어요 🐻✨</p>
     <p class="hint">왼쪽 <b>▲▼</b>로 <b>순서</b>를 바꿀 수 있어요. 위에 있는 항목이 화면에서도 앞에 옵니다.</p>
     <p class="hint">항목은 두 가지예요. 오른쪽 <b>📗/🙊 단추</b>를 눌러 바꿀 수 있어요.<br>
       📗 <b>내는 것</b> — 체크하면 「냈다」 (숙제·준비물)<br>
@@ -482,7 +489,8 @@ function itemIcon(name, kind){
   for(const [re,ic] of ICONS) if(re.test(name)) return ic;
   return '📌';
 }
-const iconOf=it=>itemIcon(it.name, it.kind);
+/* 직접 고른 그림이 있으면 그것, 없으면 이름에 맞춰 자동 */
+const iconOf=it=>it.icon || itemIcon(it.name, it.kind);
 
 let S=load();
 
@@ -498,7 +506,7 @@ function normalize(d){
   d.students=(d.students||[]).map((s,i)=>({id:s.id||uid(), no:s.no||i+1, name:s.name||''}));
   /* kind: 'todo' = 내는 것(체크=완료) · 'mark' = 걸린 것(체크=걸림, 떠듦·금지어 등) */
   d.items=(d.items||[]).map(it=>({id:it.id||uid(), name:it.name||'숙제', date:it.date||today(),
-    kind: it.kind==='mark'?'mark':'todo', done:it.done||{}}));
+    kind: it.kind==='mark'?'mark':'todo', icon: it.icon||'', done:it.done||{}}));
   if(!d.items.some(i=>i.id===d.active)) d.active=d.items[0]?d.items[0].id:null;
   d.numOnly=!!d.numOnly;
   d.animal = d.animal===undefined ? true : !!d.animal;
@@ -671,7 +679,9 @@ function drawItems(){
     up.disabled=(i===0); dn.disabled=(i===S.items.length-1);
     up.onclick=()=>moveItem(i,-1); dn.onclick=()=>moveItem(i,1);
     ord.append(up,dn);
-    const ic=document.createElement('span'); ic.className='ic'; ic.textContent=iconOf(it);
+    const ic=document.createElement('button'); ic.className='ic'; ic.textContent=iconOf(it); ic.title='그림 고르기';
+    ic.onclick=()=>openEmoji(v=>{ it.icon=v; ic.textContent=iconOf(it); save(); render(); },
+      {groups:ITEM_GROUPS, auto:true, hint:'항목에 붙일 그림을 톡 누르세요. 「↩️ 자동으로」를 누르면 이름에 맞춰 알아서 골라줍니다.'});
     const inp=document.createElement('input'); inp.type='text'; inp.value=it.name; inp.maxLength=20;
     inp.oninput=()=>{ it.name=inp.value; ic.textContent=iconOf(it); save(); render(); };
     const kind=document.createElement('button');
@@ -902,7 +912,8 @@ function drawAreaRows(){
       `<button class="btn mini danger">삭제</button>`;
     const [n,c]=row.querySelectorAll('input');
     const pickBtn=row.querySelector('.pick');
-    pickBtn.onclick=()=>openEmoji(v=>{ a.emoji=v; pickBtn.textContent=v; });
+    pickBtn.onclick=()=>openEmoji(v=>{ a.emoji=v; pickBtn.textContent=v; },
+      {hint:'청소구역에 어울리는 그림을 톡 누르세요.'});
     n.oninput=()=>a.name=n.value;
     c.oninput=()=>a.cap=Math.max(1,+c.value||1);
     row.querySelectorAll('button')[1].onclick=()=>{ draftAreas.splice(i,1); drawAreaRows(); };
@@ -913,14 +924,38 @@ function drawAreaRows(){
 const EMOJI_PAL=['🧹','🧽','🪣','🧴','🪟','🚪','🗑️','♻️','📚','🪑','🖥️','🧻',
   '🚽','🪞','🌱','🪴','👟','🧺','🍽️','🧊','🎒','🖍️','📦','🧯',
   '⭐','🌈','🍀','🐻','🐰','🐤','🌻','🎨','🎵','🏫','🧼','🪥'];
+/* 확인할 것(항목)용 — 갈래별로 넉넉하게, 귀여운 것 위주 */
+const ITEM_GROUPS=[
+  {t:'🐻 귀여운 친구들', e:['🐻','🐰','🐤','🐱','🐼','🦊','🐨','🐯','🐣','🐧','🐢','🦁','🐮','🐸','🐶','🐹',
+    '🦉','🐳','🦄','🐝','🐬','🐴','🦒','🐥','🦋','🐞','🐠','🦔','🐿️','🐑','🐙','🦭']},
+  {t:'✨ 반짝반짝', e:['⭐','🌟','✨','🌈','🍀','🌸','🌻','🌷','🎈','🎁','🧸','🍭','🍪','🧁','🍩','🎀',
+    '💖','💛','💚','💙','💜','🩷','☀️','☁️','🌙','⛄','🌊','🔮','🪄','🎠','🎡','🍓']},
+  {t:'📚 공부·확인할 것', e:['📒','✏️','📝','📮','📚','📔','📄','📋','📌','🗂️','📐','📏','✂️','🖍️','🖊️','🖌️',
+    '🔢','🧮','🔤','🌏','🔬','🧪','💻','🔖','📅','🗓️','⏰','🔔','📢','🎒','👟','🧢']},
+  {t:'🎨 예체능·생활', e:['🎨','🎵','🎹','🥁','🎤','🎬','⚽','🏀','⚾','🏐','🎾','🏸','🥋','🩰','🤸','🏃',
+    '🧘','🚴','🏊','🪥','🦷','🍎','🥕','🥛','🍱','💧','😴','🧹','🧺','🛏️','🪴','🧼']},
+  {t:'🙊 걸린 것', e:['🙊','🤐','🤫','⚡','🚫','❗','❓','⏰','💤','🗣️','👀','🫢','🧯','🚨','⚠️','🙅']}
+];
+const ITEM_PAL=ITEM_GROUPS.flatMap(g=>g.e);
 let emojiCb=null;
-function openEmoji(cb){
+function openEmoji(cb, opt){
+  opt=opt||{};
   emojiCb=cb;
-  const box=$('#epal'); box.innerHTML='';
-  EMOJI_PAL.forEach(v=>{
-    const b=document.createElement('button'); b.textContent=v;
-    b.onclick=()=>{ if(emojiCb) emojiCb(v); $('#mEmoji').classList.remove('on'); };
-    box.appendChild(b);
+  $('#emojiHint').textContent=opt.hint||'어울리는 그림을 톡 누르세요.';
+  const auto=$('#btnEmojiAuto');
+  auto.hidden=!opt.auto;
+  auto.onclick=()=>{ if(emojiCb) emojiCb(''); $('#mEmoji').classList.remove('on'); };
+  const wrap=$('#epalWrap'); wrap.innerHTML='';
+  const groups = opt.groups || [{t:'', e:(opt.pal||EMOJI_PAL)}];
+  groups.forEach(g=>{
+    if(g.t){ const h=document.createElement('div'); h.className='epal-t'; h.textContent=g.t; wrap.appendChild(h); }
+    const box=document.createElement('div'); box.className='epal';
+    g.e.forEach(v=>{
+      const b=document.createElement('button'); b.textContent=v;
+      b.onclick=()=>{ if(emojiCb) emojiCb(v); $('#mEmoji').classList.remove('on'); };
+      box.appendChild(b);
+    });
+    wrap.appendChild(box);
   });
   $('#mEmoji').classList.add('on');
 }
@@ -968,7 +1003,7 @@ function encodeBackup(){
   // 이름 목록 + 항목별 「제출한 사람 번호」만 담아 코드를 짧게 유지한다
   const idx={}; S.students.forEach((s,i)=>idx[s.id]=i);
   const payload={v:3, k:S.klass, n:S.students.map(s=>s.name),
-    i:S.items.map(it=>({n:it.name, t:isMark(it)?1:0,
+    i:S.items.map(it=>({n:it.name, t:isMark(it)?1:0, e:it.icon||'',
       d:Object.keys(it.done).map(k=>idx[k]).filter(v=>v!==undefined)})),
     a:S.areas.map(x=>[x.emoji,x.name,x.cap]),
     h:S.students.map(s=>(S.cleanHist[s.id]||[]).map(aid=>S.areas.findIndex(x=>x.id===aid)).filter(v=>v>=0)),
@@ -982,7 +1017,7 @@ function decodeBackup(code){
   const students=d.n.map((name,i)=>({id:uid(), no:i+1, name:String(name)}));
   const items=(d.i||[]).map(it=>{
     const done={}; (it.d||[]).forEach(i=>{ if(students[i]) done[students[i].id]=1; });
-    return {id:uid(), name:it.n||'숙제', date:today(), kind:it.t?'mark':'todo', done};
+    return {id:uid(), name:it.n||'숙제', date:today(), kind:it.t?'mark':'todo', icon:it.e||'', done};
   });
   const areas=(d.a||[]).map(x=>({id:uid(), emoji:x[0]||'🧹', name:x[1]||'청소구역', cap:+x[2]||1}));
   const cleanHist={};
@@ -1068,7 +1103,7 @@ if(!S.students.length) $('#btnSetting').click();
 <script>
 /* 새 버전이 올라오면 브라우저가 옛 화면을 붙들고 있지 않도록 스스로 다시 받아온다 */
 (function(){
-  var APP_VER = "20260918-0952";
+  var APP_VER = "20260918-1002";
   try{
     fetch("version.txt?t=" + Date.now(), {cache:"no-store"})
       .then(function(r){ return r.ok ? r.text() : ""; })
