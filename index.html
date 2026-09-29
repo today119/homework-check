@@ -242,6 +242,10 @@ input[type=text],textarea{
 textarea{min-height:30vh; line-height:1.55; resize:vertical}
 .row{display:flex; gap:8px; flex-wrap:wrap; margin-top:14px}
 .row.end{justify-content:flex-end}
+/* 항목이 많아져도 아래 단추가 늘 보이게 (시트 바닥에 붙임) */
+.sheet>.row.foot{position:sticky; bottom:-18px; z-index:5; margin-top:16px;
+  padding:12px 0 18px; background:#fff; border-top:2px dashed var(--line)}
+
 .toggle{display:flex; align-items:center; gap:10px; margin-top:1em; font-size:clamp(15px,1.9vh,19px); cursor:pointer}
 .sw{width:52px; height:30px; border-radius:99px; background:#ddd6ee; position:relative; flex:0 0 auto; transition:background .18s}
 .sw i{position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:left .18s}
@@ -435,7 +439,7 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
     </div>
     <p class="hint">이름 대신 「7번」처럼 번호로만 뜹니다. 교실 앞에 띄울 때 쓰세요.</p>
 
-    <div class="row end">
+    <div class="row end foot">
       <button class="btn danger mini" id="btnWipe">전체 지우기</button>
       <div class="spacer"></div>
       <button class="btn" id="btnCancelSetting">취소</button>
@@ -455,7 +459,7 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
       📗 <b>내는 것</b> — 체크하면 「냈다」 (숙제·준비물)<br>
       🙊 <b>걸린 것</b> — 체크하면 「걸렸다」 (떠듦·금지어). <b>체크한 친구가 청소 대상</b>이 됩니다.</p>
     <div class="itemlist" id="itemList"></div>
-    <div class="row">
+    <div class="row foot">
       <button class="btn primary" id="btnAddItem">📗 내는 것 만들기</button>
       <button class="btn" id="btnAddMark">🙊 걸린 것 만들기</button>
       <div class="spacer"></div>
@@ -1051,7 +1055,7 @@ function addItem(kind){
   const it={id:uid(), name: kind==='mark'?'떠듦':'새 항목', date:today(), kind, done:{}};
   S.items.push(it); S.active=it.id; save(); drawItems(); render();
   const inputs=$$('#itemList input'); const last=inputs[inputs.length-1];
-  if(last){ last.focus(); last.select(); }
+  if(last){ last.focus(); last.select(); last.scrollIntoView({block:'center'}); }
 }
 $('#btnAddItem').onclick=()=>addItem('todo');
 $('#btnAddMark').onclick=()=>addItem('mark');
