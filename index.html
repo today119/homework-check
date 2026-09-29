@@ -73,6 +73,10 @@ header{
 }
 .tab.on{background:var(--grape); border-color:var(--grape-d); color:#fff; top:0; padding-bottom:calc(.5em + 4px)}
 .tab .n{font-size:.78em; opacity:.85; margin-left:.35em}
+/* 탭에서 바로 항목 없애기 (고른 항목에만 보임) */
+.tab .x{display:inline-block; margin-left:.45em; width:1.6em; line-height:1.6em; text-align:center;
+  font-size:.72em; border-radius:50%; background:rgba(255,255,255,.3); color:#fff}
+.tab .x:active{background:rgba(255,255,255,.6); color:var(--grape-d)}
 .tab.add{color:var(--grape); border-style:dashed}
 
 /* ── 진행 요약 ── */
@@ -454,6 +458,7 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
     <h3>📚 확인할 것</h3>
     <p class="hint">숙제, 학습지, 알림장 사인처럼 확인할 것을 만들어 두세요. 이름은 눌러서 고칠 수 있어요.<br>
       이름에 따라 <b>어울리는 그림</b>이 저절로 붙고, 그림을 <b>누르면 직접 고를 수</b> 있어요 🐻✨</p>
+    <p class="hint">다 쓴 항목은 <b>삭제</b>를 누르거나, 화면 위 <b>항목 탭의 ✕</b>를 눌러 바로 없앨 수 있어요.</p>
     <p class="hint">왼쪽 <b>▲▼</b>로 <b>순서</b>를 바꿀 수 있어요. 위에 있는 항목이 화면에서도 앞에 옵니다.</p>
     <p class="hint">항목은 두 가지예요. 오른쪽 <b>📗/🙊 단추</b>를 눌러 바꿀 수 있어요.<br>
       📗 <b>내는 것</b> — 체크하면 「냈다」 (숙제·준비물)<br>
@@ -542,6 +547,12 @@ function render(){
     const n=todoOf(it).length;
     b.innerHTML=`${iconOf(it)} ${esc(it.name)}<span class="n">${n?n+'명':'✅'}</span>`;
     b.onclick=()=>{ S.active=it.id; save(); render(); };
+    if(it.id===S.active){
+      const x=document.createElement('span');
+      x.className='x'; x.textContent='✕'; x.title='이 항목 없애기';
+      x.onclick=e=>{ e.stopPropagation(); removeItem(it.id); };
+      b.appendChild(x);
+    }
     tabs.appendChild(b);
   });
   const add=document.createElement('button');
@@ -697,13 +708,18 @@ function drawItems(){
     kind.onclick=()=>{ it.kind=isMark(it)?'todo':'mark'; drawKind(); save(); render(); };
     drawKind();
     const del=document.createElement('button'); del.className='btn mini danger'; del.textContent='삭제';
-    del.onclick=()=>{
-      S.items=S.items.filter(x=>x.id!==it.id);
-      if(S.active===it.id) S.active=S.items[0]?S.items[0].id:null;
-      save(); drawItems(); render();
-    };
+    del.onclick=()=>removeItem(it.id);
     row.append(ord,ic,inp,kind,del); box.appendChild(row);
   });
+}
+function removeItem(id){
+  const i=S.items.findIndex(x=>x.id===id); if(i<0) return;
+  const it=S.items[i];
+  const n=Object.keys(it.done||{}).length;
+  if(!confirm(`「${it.name}」 항목을 없앨까요?`+(n?`\n체크해 둔 ${n}명도 함께 사라져요.`:''))) return;
+  S.items.splice(i,1);
+  if(S.active===id){ const nx=S.items[Math.min(i,S.items.length-1)]; S.active=nx?nx.id:null; }
+  save(); drawItems(); render();
 }
 function moveItem(i,dir){
   const j=i+dir;
