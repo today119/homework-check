@@ -64,14 +64,14 @@ header{
 .spacer{flex:1}
 
 /* ── 항목 탭 ── */
-.tabs{display:flex; gap:8px; overflow-x:auto; padding:10px 2px 2px; scrollbar-width:none}
+.tabs{display:flex; gap:5px; overflow-x:auto; padding:10px 2px 2px; scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{
-  flex:0 0 auto; border-radius:14px 14px 0 0; padding:.5em .95em;
-  font-size:clamp(16px,2.2vh,25px); background:#fff; border:2px solid var(--line);
+  flex:0 0 auto; border-radius:11px 11px 0 0; padding:.38em .7em;
+  font-size:clamp(13px,1.6vh,18px); background:#fff; border:2px solid var(--line);
   border-bottom:none; color:var(--sub); position:relative; top:2px;
 }
-.tab.on{background:var(--grape); border-color:var(--grape-d); color:#fff; top:0; padding-bottom:calc(.5em + 4px)}
+.tab.on{background:var(--grape); border-color:var(--grape-d); color:#fff; top:0; padding-bottom:calc(.38em + 3px)}
 .tab .n{font-size:.78em; opacity:.85; margin-left:.35em}
 /* 탭에서 바로 항목 없애기 (고른 항목에만 보임) */
 .tab .x{display:inline-block; margin-left:.45em; width:1.6em; line-height:1.6em; text-align:center;
