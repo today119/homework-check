@@ -163,6 +163,30 @@ main{padding:8px 12px 120px}
 .allclear .txt{font-size:clamp(26px,6vh,64px); color:var(--green-d)}
 .show .foot{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:1.5vh}
 
+/* ── 📮 제출 알림판 (항목별 안 낸 친구 한 화면) ── */
+.subhead{display:flex; align-items:center; justify-content:center; gap:.4em}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-.12em) rotate(6deg)}}
+.subhead .mb{display:inline-block; animation:bob 1.6s ease-in-out infinite}
+#subTitle{font-size:clamp(30px,6.6vh,76px)}
+#subTitle .pl{color:#ff6f9c}
+.subgrid{flex:1; min-height:0; display:grid; grid-auto-rows:minmax(0,1fr); gap:1.6vh 1.3vw; margin-top:1.8vh; overflow:hidden; --sc:1}
+#subSub{font-size:clamp(17px,3vh,34px); color:#8a6fc9}
+.scard{background:#fff; border:5px solid var(--c); border-radius:28px; overflow:hidden;
+  box-shadow:0 6px 0 var(--c); display:flex; flex-direction:column; min-height:0}
+.scard .hd{background:var(--c); color:#fff; display:flex; align-items:center; gap:.35em;
+  padding:.28em .6em .32em; font-size:calc(clamp(22px,4.4vh,54px) * max(var(--sc), .8)); line-height:1.15;
+  text-shadow:0 2px 0 rgba(0,0,0,.12)}
+.scard .hd .ic{background:#fff; border-radius:.4em; padding:.02em .14em; text-shadow:none}
+.scard .hd .nm{flex:1; min-width:0; overflow-wrap:anywhere}
+.scard .hd .cnt{background:rgba(255,255,255,.95); color:var(--c); border-radius:999px; padding:.05em .5em;
+  font-size:.75em; text-shadow:none; white-space:nowrap}
+.scard .bd{flex:1; min-height:0; overflow:hidden; display:flex; flex-wrap:wrap; align-content:flex-start; gap:1vh .8vw; padding:1.2vh 1vw 1.5vh}
+.scard .bd b{font-weight:normal; display:flex; align-items:center; gap:.2em; background:var(--cl);
+  border:3px solid var(--c); color:var(--ink); border-radius:18px; padding:.12em .5em; line-height:1.2;
+  font-size:calc(clamp(26px,6vh,76px) * var(--sc))}
+.scard .bd b i{font-style:normal; font-size:.85em}
+.subdone{margin-top:1vh; text-align:center; color:var(--green-d); font-size:clamp(15px,2.4vh,28px)}
+
 /* 색종이 */
 .confetti{position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden}
 @keyframes fall{
@@ -325,6 +349,7 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
 
 <div class="dock" id="dock" hidden>
   <button class="btn primary big" id="btnShow">📺 크게 보기</button>
+  <button class="btn primary big" id="btnSubmit" style="background:#ff8fb1;border-color:#ec6f96">📮 제출 알림판</button>
   <button class="btn green" id="btnAllDone">모두 냈어요</button>
   <button class="btn" id="btnReset">이 항목 다시</button>
   <button class="btn" id="btnCopy">📋 명단 복사</button>
@@ -341,6 +366,18 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
   <div class="foot">
     <button class="btn" id="btnTableMode">📊 표로 보기</button>
     <button class="btn primary" id="btnCloseShow">닫기</button>
+  </div>
+</div>
+
+<!-- 📮 제출 알림판: 항목별 안 낸 친구 -->
+<div class="show" id="subShow">
+  <div class="confetti" id="subConfetti"></div>
+  <h2 class="subhead" id="subTitle"></h2>
+  <div class="sub" id="subSub"></div>
+  <div class="subgrid" id="subGrid"></div>
+  <div class="subdone" id="subDone"></div>
+  <div class="foot">
+    <button class="btn primary" id="btnCloseSub">닫기</button>
   </div>
 </div>
 
@@ -683,6 +720,51 @@ function drawShow(){
     box.innerHTML=todo.map(s=>`<b>${S.animal?`<i>${animalOf(s)}</i>`:''}${esc(label(s))}</b>`).join('');
   }
 }
+
+/* ── 📮 제출 알림판: 내는 항목(todo)마다 안 낸 친구를 카드로 한 화면에 ── */
+const SUB_COLORS=[['#ff8fb1','#fff0f5'],['#7fb6f5','#eef6ff'],['#ffab5e','#fff4e8'],['#5ec98d','#ecfaf2'],
+  ['#a58be6','#f4efff'],['#f2b632','#fff8e3'],['#4fc3c8','#e9fafa'],['#f07f7f','#fff0f0']];
+const SUB_PHRASES=['똑똑~ 선생님이 기다리고 있어요 💌','얼른 내고 신나게 놀아요! 🏃‍♀️','오늘 안에 쏙! 넣어 주세요 📬',
+  '할 수 있어요! 조금만 힘내요 💪','내 이름이 보이면 지금 바로 챙겨요 ✨'];
+function openSubmit(){ drawSubmit(); $('#subShow').classList.add('on'); fitSubmit(); }
+function drawSubmit(){
+  const todos=S.items.filter(it=>!isMark(it));
+  const cards=todos.map((it,k)=>({it, k, list:todoOf(it)})).filter(c=>c.list.length);
+  const done=todos.filter(it=>!todoOf(it).length);
+  const grid=$('#subGrid'), cf=$('#subConfetti');
+  $('#subDone').textContent = cards.length && done.length
+    ? `🌟 다 냈어요: ${done.map(it=>iconOf(it)+' '+it.name).join(', ')}` : '';
+  if(!cards.length){
+    $('#subTitle').innerHTML='<span class="mb">🎉</span> 모두 다 냈어요!';
+    $('#subSub').textContent='우리 반 최고! 👏';
+    grid.style.gridTemplateColumns='1fr';
+    grid.innerHTML=`<div class="allclear"><div class="emo">🥳</div><div class="txt">${todos.length?'제출할 것이 하나도 안 남았어요!':'아직 내는 항목이 없어요'}</div></div>`;
+    cf.innerHTML='';
+    for(let i=0;i<44;i++){ const p=document.createElement('i'); p.style.left=Math.random()*100+'%';
+      p.style.background=CONF[i%CONF.length]; p.style.animationDuration=(2.6+Math.random()*2.4)+'s';
+      p.style.animationDelay=(-Math.random()*4)+'s'; if(i%3===0) p.style.borderRadius='50%'; cf.appendChild(p); }
+    return;
+  }
+  cf.innerHTML='';
+  $('#subTitle').innerHTML='<span class="mb">📮</span> <span class="pl">제출해 주세요~!</span> <span class="mb" style="animation-delay:.4s">🙏</span>';
+  $('#subSub').textContent=SUB_PHRASES[Math.floor(Math.random()*SUB_PHRASES.length)];
+  const n=cards.length, cols= n<=3? n : n===4? 2 : n<=6? 3 : 4;
+  grid.style.gridTemplateColumns=`repeat(${cols},minmax(0,1fr))`;
+  grid.innerHTML=cards.map(c=>{
+    const [col,light]=SUB_COLORS[c.k%SUB_COLORS.length];
+    return `<div class="scard" style="--c:${col};--cl:${light}">
+      <div class="hd"><span class="ic">${iconOf(c.it)}</span><span class="nm">${esc(c.it.name)}</span><span class="cnt">${c.list.length}명</span></div>
+      <div class="bd">${c.list.map(s=>`<b>${S.animal?`<i>${animalOf(s)}</i>`:''}${esc(label(s))}</b>`).join('')}</div></div>`;
+  }).join('');
+}
+/* 카드가 화면을 넘치면 글씨를 조금씩 줄여서 한 화면에 다 들어가게 */
+function fitSubmit(){
+  const g=$('#subGrid'); let sc=1; g.style.setProperty('--sc',sc);
+  /* 카드 높이는 칸에 고정 → 이름 칸(.bd)이 넘치는지로 판단 */
+  const over=()=>[...g.querySelectorAll('.bd')].some(b=>b.scrollHeight > b.clientHeight+2);
+  while(over() && sc>0.35){ sc=Math.round((sc-0.05)*100)/100; g.style.setProperty('--sc',sc); }
+}
+window.addEventListener('resize',()=>{ if($('#subShow').classList.contains('on')) fitSubmit(); });
 
 /* ── 항목 관리 ── */
 function openItems(){ drawItems(); $('#mItems').classList.add('on'); }
@@ -1100,6 +1182,8 @@ $('#btnAddMark').onclick=()=>addItem('mark');
 $('#btnCloseItems').onclick=()=>$('#mItems').classList.remove('on');
 
 $('#btnShow').onclick=openShow;
+$('#btnSubmit').onclick=openSubmit;
+$('#btnCloseSub').onclick=()=>{ $('#subShow').classList.remove('on'); $('#subConfetti').innerHTML=''; };
 $('#btnCloseShow').onclick=closeShow;
 $('#btnTableMode').onclick=()=>{ tableMode=!tableMode; drawShow(); };
 $('#btnAllDone').onclick=()=>{
