@@ -213,6 +213,7 @@ tr.hasx td:first-child{color:#c9741c}
 .seg button{border:2px solid var(--line);border-radius:14px;padding:.5em .9em;background:#fff;
   font-size:clamp(15px,1.9vh,20px);color:var(--sub)}
 .seg button.on{background:var(--grape);border-color:var(--grape-d);color:#fff}
+.seg button.ghost{border-style:dashed;color:var(--grape)}
 .movebtn{display:flex;align-items:center;gap:.5em;border:2px solid var(--line);border-radius:16px;
   padding:.6em .8em;background:#fff;font-size:clamp(16px,2.1vh,21px);width:100%;text-align:left}
 .movebtn.on{border-color:var(--grape);background:#f6f2ff}
@@ -363,10 +364,11 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
     <p class="hint">숙제를 못 냈거나 🙊걸린 친구들에게 청소구역을 나눠줍니다.
       <b>저번에 했던 구역은 피해서</b> 돌아가며 배정돼요.<br>
       수업 중에 또 걸린 친구가 생기면 <b>「➕ 이어서 더하기」</b> — 이미 정해진 친구는 그대로 두고 <b>새 친구만</b> 들어갑니다.</p>
+    <p class="hint" style="margin-bottom:0"><b>① 어떤 항목으로 정할까요?</b> 눌러서 고르세요 (여러 개 고를 수 있어요)</p>
     <div class="seg" id="cleanSeg"></div>
     <p class="hint" id="cleanWho"></p>
-    <p class="hint">이름을 눌러 <b>넣거나 뺄 수 있어요.</b> 숙제와 상관없이 청소할 친구도 넣으세요 🙂<br>
-      이름 위 <b>⚠️2개</b>는 「안 낸 것·걸린 것」이 몇 가지인지예요.</p>
+    <p class="hint"><b>② 이름을 눌러 넣거나 뺄 수 있어요.</b> 숙제와 상관없이 청소할 친구도 넣으세요 🙂<br>
+      이름 위 <b>⚠️2개</b>는 고른 항목 중 「안 낸 것·걸린 것」이 몇 가지인지예요.</p>
     <div class="pickgrid" id="cleanStus" style="margin-bottom:6px"></div>
     <div class="row end">
       <button class="btn" id="btnCancelClean">취소</button>
@@ -524,6 +526,7 @@ function normalize(d){
     .map(a=>({id:a.id||uid(), emoji:a.emoji||'🧹', name:a.name||'청소구역', cap:Math.max(1,+a.cap||1)}));
   d.cleanHist=d.cleanHist||{};   // {학생id:[구역id, ...] 최근 순}
   d.clean=d.clean||null;         // 마지막 배정 결과
+  d.cleanSel=Array.isArray(d.cleanSel)? d.cleanSel : [];   // 청소 대상을 뽑을 항목들
   return d;
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
@@ -747,13 +750,13 @@ function parseRoster(text){
 function rosterText(){ return S.students.map(s=>`${s.no}. ${s.name}`).join('\n'); }
 
 /* ── 청소 담당 정하기 ── */
-let cleanScope='item';   // 'item' = 이 항목 미제출자 / 'all' = 하나라도 밀린 친구
 let cleanPick=new Set();  // 실제 청소 대상(선생님이 자유롭게 넣고 뺀다)
 
-function cleanTargets(scope){
-  /* 'all' = 안 낸 것이든 걸린 것이든 하나라도 있는 친구 */
-  if(scope==='all') return S.students.filter(s=>S.items.some(it=>flagged(s,it)));
-  const it=item(); return it? todoOf(it) : [];
+/* 청소 대상을 뽑을 항목 — 선생님이 여러 개 고른다(S.cleanSel). 고른 항목 중 하나라도 걸리면 대상 */
+const cleanItems=()=>S.items.filter(it=>S.cleanSel.includes(it.id));
+function cleanTargets(){
+  const its=cleanItems();
+  return S.students.filter(s=>its.some(it=>flagged(s,it)));
 }
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
@@ -825,14 +828,29 @@ window.addEventListener('resize',()=>{ if($('#cleanShow').classList.contains('on
 
 function drawCleanSeg(){
   const seg=$('#cleanSeg'); seg.innerHTML='';
-  const it=item();
-  [['item', it? `「${it.name}」 ${isMark(it)?'걸린':'못 낸'} 친구` : '이 항목', cleanTargets('item').length],
-   ['all', '밀린·걸린 친구 전부', cleanTargets('all').length]].forEach(([k,lab,n])=>{
+  /* 항목 고르기: 누르면 넣고/빼기. 손으로 넣은 친구는 그대로 두고 항목 대상만 바꾼다 */
+  const setSel=ids=>{
+    const old=new Set(cleanTargets().map(s=>s.id));
+    S.cleanSel=ids; save();
+    const keep=[...cleanPick].filter(id=>!old.has(id));
+    cleanPick=new Set([...keep, ...cleanTargets().map(s=>s.id), ...assignedToday()]);
+    drawCleanSeg();
+  };
+  S.items.forEach(it=>{
+    const on=S.cleanSel.includes(it.id);
     const b=document.createElement('button');
-    b.className=(cleanScope===k?'on':''); b.textContent=`${lab} ${n}명 다시 고르기`;
-    b.onclick=()=>{ cleanScope=k; cleanPick=new Set(cleanTargets(k).map(s=>s.id)); drawCleanSeg(); };
+    b.className=on?'on':'';
+    b.textContent=`${on?'✔ ':''}${iconOf(it)} ${it.name} ${todoOf(it).length}명`;
+    b.onclick=()=>setSel(on? S.cleanSel.filter(x=>x!==it.id) : [...S.cleanSel, it.id]);
     seg.appendChild(b);
   });
+  if(S.items.length>1){
+    const all=S.items.every(it=>S.cleanSel.includes(it.id));
+    const b=document.createElement('button'); b.className='ghost';
+    b.textContent=all?'모두 빼기':'모두 고르기';
+    b.onclick=()=>setSel(all? [] : S.items.map(it=>it.id));
+    seg.appendChild(b);
+  }
 
   const done=assignedToday();                       /* 오늘 이미 청소로 정해진 친구 */
   const chosen=S.students.filter(s=>cleanPick.has(s.id));
@@ -848,7 +866,7 @@ function drawCleanSeg(){
   const box=$('#cleanStus'); box.innerHTML='';
   S.students.forEach(s=>{
     const on=cleanPick.has(s.id);
-    const cnt=S.items.filter(it=>flagged(s,it)).length;      /* 안 낸 것·걸린 것 가짓수 */
+    const cnt=cleanItems().filter(it=>flagged(s,it)).length;  /* 고른 항목 중 안 낸 것·걸린 것 가짓수 */
     const b=document.createElement('button');
     b.className='stu '+(on?'sel':'off');
     b.innerHTML=(S.animal?`<div class="an">${animalOf(s)}</div>`:'')+
@@ -867,7 +885,10 @@ function assignedToday(){
 function openCleanPick(){
   if(!S.students.length){ toast('명렬표를 먼저 넣어주세요 🙂'); return; }
   /* 오늘 걸린 친구 + 이미 청소로 정해진 친구를 기본으로 골라둔다 */
-  cleanPick=new Set(cleanTargets(cleanScope).map(s=>s.id));
+  /* 처음이거나 고른 항목이 다 지워졌으면 지금 보고 있는 항목으로 시작 */
+  S.cleanSel=S.cleanSel.filter(id=>S.items.some(i=>i.id===id));
+  if(!S.cleanSel.length && S.active) S.cleanSel=[S.active];
+  cleanPick=new Set(cleanTargets().map(s=>s.id));
   assignedToday().forEach(id=>cleanPick.add(id));
   drawCleanSeg(); $('#mClean').classList.add('on');
 }
