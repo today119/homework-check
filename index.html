@@ -243,6 +243,13 @@ tr.hasx td:first-child{color:#c9741c}
 .movebtn.on{border-color:var(--grape);background:#f6f2ff}
 .movebtn span{margin-left:auto;font-size:.8em;color:var(--sub)}
 .cbox .who b{cursor:pointer}
+.cbox.lunch{border-color:#ff9db0;background:#fff5f7}
+.cbox.lunch .who b{background:#ffe8ee;border-color:#ff9db0;color:#d23d63}
+.cbox.lunch .none{cursor:pointer}
+#mLunch{z-index:80}
+#mLunch .sheet{width:min(720px,100%)}
+.pickgrid .stu.lsel{border-color:#ff7a96;background:#fff5f7}
+.pickgrid .stu.lsel .nm{color:#d23d63}
 /* 청소 대상 고르기 그리드 — 한 화면에 많이 보이게 */
 #mClean .sheet{width:min(720px,100%)}
 .pickgrid{display:grid;gap:7px;grid-template-columns:repeat(auto-fill,minmax(clamp(92px,9vw,120px),1fr))}
@@ -388,6 +395,7 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
   <div class="clean" id="cleanBox"></div>
   <div class="foot">
     <button class="btn" id="btnCleanMore">➕ 걸린 친구 더 넣기</button>
+    <button class="btn" id="btnLunch">🍱 점심시간 없는 친구</button>
     <button class="btn" id="btnCleanAgain">🎲 다시 뽑기</button>
     <button class="btn" id="btnCleanCopy">📋 명단 복사</button>
     <button class="btn primary" id="btnCloseClean">닫기</button>
@@ -412,6 +420,23 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
       <div class="spacer"></div>
       <button class="btn green" id="btnAddClean" hidden>➕ 이어서 더하기</button>
       <button class="btn primary" id="btnDoClean">🧹 새로 정하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 점심시간 없는 친구 고르기 -->
+<div class="modal" id="mLunch">
+  <div class="sheet">
+    <h3>🍱 오늘 점심시간이 없어요</h3>
+    <p class="hint">점심시간에 못 노는 친구를 눌러서 넣거나 빼세요. 청소 담당과 따로 정할 수 있어요 🙂<br>
+      이름 위 <b>🧹</b>는 오늘 청소하는 친구예요.</p>
+    <div class="seg"><button id="btnLunchClean">🧹 청소 친구 모두 넣기</button><button class="ghost" id="btnLunchNone">모두 빼기</button></div>
+    <p class="hint" id="lunchWho"></p>
+    <div class="pickgrid" id="lunchStus" style="margin-bottom:6px"></div>
+    <div class="row end foot">
+      <button class="btn" id="btnCancelLunch">취소</button>
+      <div class="spacer"></div>
+      <button class="btn primary" id="btnSaveLunch">🍱 정했어요</button>
     </div>
   </div>
 </div>
@@ -563,6 +588,7 @@ function normalize(d){
     .map(a=>({id:a.id||uid(), emoji:a.emoji||'🧹', name:a.name||'청소구역', cap:Math.max(1,+a.cap||1)}));
   d.cleanHist=d.cleanHist||{};   // {학생id:[구역id, ...] 최근 순}
   d.clean=d.clean||null;         // 마지막 배정 결과
+  d.lunch=d.lunch&&Array.isArray(d.lunch.ids)? d.lunch : null;   // 오늘 점심시간이 없는 친구 {at, ids}
   d.cleanSel=Array.isArray(d.cleanSel)? d.cleanSel : [];   // 청소 대상을 뽑을 항목들
   return d;
 }
@@ -896,6 +922,15 @@ function openClean(){
     d.querySelectorAll('.who b').forEach(el=>el.onclick=()=>openMove(el.dataset.sid));
     box.appendChild(d);
   });
+  /* 🍱 오늘 점심시간이 없어요 — 청소와 따로 고른다 */
+  const lids=lunchToday();
+  const ld=document.createElement('div'); ld.className='cbox lunch';
+  ld.innerHTML=`<h3>🍱 오늘 점심시간이 없어요~ <span>${lids.length}명</span></h3>`+
+    (lids.length
+      ? `<div class="who">${lids.map(id=>{const s=S.students.find(x=>x.id===id); return s?`<b>${esc(label(s))}</b>`:'';}).join('')}</div>`
+      : '<div class="none">오늘은 없어요 🙂 (눌러서 넣기)</div>');
+  ld.querySelectorAll('.who b, .none').forEach(el=>el.onclick=openLunch);
+  box.appendChild(ld);
   $('#cleanShow').classList.add('on');
   fitClean();
 }
@@ -989,9 +1024,46 @@ $('#btnCleanCopy').onclick=async ()=>{
   const txt='[오늘의 청소] '+c.at+'\n'+S.areas.map(a=>{
     const list=(c.by[a.id]||[]).map(id=>{const s=S.students.find(x=>x.id===id); return s?s.name:'';});
     return `${a.emoji} ${a.name} : ${list.length? list.join(', ') : '-'}`;
-  }).join('\n');
+  }).join('\n')+(()=>{const l=lunchToday().map(id=>{const s=S.students.find(x=>x.id===id); return s?s.name:'';}).filter(Boolean);
+    return l.length? `\n🍱 점심시간 없음 : ${l.join(', ')}` : '';})();
   try{ await navigator.clipboard.writeText(txt); toast('청소 명단을 복사했어요 📋'); }
   catch(e){ toast('복사가 안 됐어요 😢'); }
+};
+
+/* ── 🍱 점심시간 없는 친구 ── */
+let lunchPick=new Set();
+function lunchToday(){
+  if(!S.lunch || S.lunch.at!==today()) return [];
+  return S.lunch.ids.filter(id=>S.students.some(s=>s.id===id));
+}
+function openLunch(){
+  lunchPick=new Set(lunchToday());
+  drawLunch(); $('#mLunch').classList.add('on');
+}
+function drawLunch(){
+  const cl=assignedToday();
+  const chosen=S.students.filter(s=>lunchPick.has(s.id));
+  $('#lunchWho').innerHTML=chosen.length
+    ? `점심시간 없는 친구 <b>${chosen.length}명</b> : ${chosen.map(s=>esc(s.name)).join(', ')}`
+    : '아직 아무도 없어요. 아래에서 이름을 눌러주세요 🙂';
+  const box=$('#lunchStus'); box.innerHTML='';
+  S.students.forEach(s=>{
+    const on=lunchPick.has(s.id);
+    const b=document.createElement('button');
+    b.className='stu '+(on?'lsel':'off');
+    b.innerHTML=(S.animal?`<div class="an">${animalOf(s)}</div>`:'')+
+      `<div class="no">${on?'🍱 ':''}${cl.has(s.id)?'🧹':s.no+'번'}</div><div class="nm">${esc(s.name)}</div>`;
+    b.onclick=()=>{ on? lunchPick.delete(s.id) : lunchPick.add(s.id); drawLunch(); };
+    box.appendChild(b);
+  });
+}
+$('#btnLunch').onclick=openLunch;
+$('#btnLunchClean').onclick=()=>{ assignedToday().forEach(id=>lunchPick.add(id)); drawLunch(); };
+$('#btnLunchNone').onclick=()=>{ lunchPick.clear(); drawLunch(); };
+$('#btnCancelLunch').onclick=()=>$('#mLunch').classList.remove('on');
+$('#btnSaveLunch').onclick=()=>{
+  S.lunch={at:today(), ids:S.students.filter(s=>lunchPick.has(s.id)).map(s=>s.id)};
+  save(); $('#mLunch').classList.remove('on'); openClean();
 };
 
 /* ── 배정 후 손으로 고치기 ── */
