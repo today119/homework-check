@@ -187,6 +187,30 @@ main{padding:8px 12px 120px}
 .scard .bd b i{font-style:normal; font-size:.85em}
 .subdone{margin-top:1vh; text-align:center; color:var(--green-d); font-size:clamp(15px,2.4vh,28px)}
 
+/* ── 📢 알림판 ── */
+.nhead{text-align:center}
+.ndate{display:inline-block; background:#fff; border:3px solid var(--line); border-radius:999px; padding:.15em .9em;
+  color:var(--grape-d); font-size:clamp(16px,2.8vh,32px); margin-bottom:.6vh}
+#noticeShow h2{font-size:clamp(30px,6.4vh,74px)}
+#noticeShow h2 .pl{color:var(--grape)}
+.nboard{flex:1; min-height:0; overflow:hidden; margin:2vh auto 0; width:min(1500px,100%); --ns:1;
+  background:#fff; border:5px solid #f4c84f; border-radius:32px; box-shadow:0 7px 0 #f4c84f;
+  padding:2.2vh 2.4vw; display:flex; flex-direction:column; justify-content:center; gap:1.6vh}
+.nline+.nline{border-top:2px dashed #f3e6bf; padding-top:1.6vh}
+.nline{display:flex; align-items:flex-start; gap:.45em; font-size:calc(clamp(26px,6.4vh,84px) * var(--ns)); line-height:1.3}
+.nline .ic{flex:0 0 auto; width:1.35em; height:1.35em; display:flex; align-items:center; justify-content:center;
+  background:#fff8e3; border:3px solid #f4c84f; border-radius:.35em; font-size:.85em; margin-top:.05em}
+.nline .tx{flex:1; min-width:0; overflow-wrap:anywhere; white-space:pre-wrap}
+.nline.star .tx{color:#c0392b}
+.nline.star .tx span{background:linear-gradient(transparent 55%,#fff07a 55%); -webkit-box-decoration-break:clone; box-decoration-break:clone}
+.nempty{text-align:center; color:var(--sub); font-size:clamp(22px,4vh,44px)}
+.nquick{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px}
+.nquick button{border:2px solid var(--line); border-radius:999px; background:#fdfcff; padding:.35em .8em; font-size:clamp(14px,1.8vh,17px)}
+.nquick button:active{background:#f3efff}
+.itemrow .st{border:2px solid var(--line); border-radius:10px; background:#fff; width:2.3em; height:2.3em; font-size:17px; filter:grayscale(1); opacity:.45}
+.itemrow .st.on{filter:none; opacity:1; background:#fff8d6; border-color:#f4c84f}
+.itemrow .del{border:2px solid var(--line); border-radius:10px; background:#fff; width:2.3em; height:2.3em; color:#d9534f}
+
 /* 색종이 */
 .confetti{position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden}
 @keyframes fall{
@@ -338,6 +362,7 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
     </svg>
     <div class="title">오늘의 확인<small id="klassName">우리 반</small></div>
     <div class="spacer"></div>
+    <button class="btn ghost" id="btnNotice">📢 알림판</button>
     <button class="btn ghost" id="btnSetting">⚙️ 설정</button>
   </div>
   <div class="tabs" id="tabs"></div>
@@ -361,6 +386,17 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
   <button class="btn" id="btnReset">이 항목 다시</button>
   <button class="btn" id="btnCopy">📋 명단 복사</button>
   <button class="btn" id="btnClean">🧹 청소 담당 정하기</button>
+</div>
+
+<!-- 📢 알림판: 아이들에게 알릴 것 -->
+<div class="show" id="noticeShow">
+  <div class="nhead"><div class="ndate" id="nDate"></div>
+    <h2 class="subhead"><span class="mb">📢</span> <span class="pl">오늘의 알림</span> <span class="mb" style="animation-delay:.4s">✨</span></h2></div>
+  <div class="nboard" id="nBoard"></div>
+  <div class="foot">
+    <button class="btn" id="btnNoticeEdit">✏️ 고치기</button>
+    <button class="btn primary" id="btnCloseNotice">닫기</button>
+  </div>
 </div>
 
 <!-- 큰 화면 -->
@@ -518,6 +554,23 @@ textarea{min-height:30vh; line-height:1.55; resize:vertical}
 </div>
 
 <!-- 항목 관리 -->
+<div class="modal" id="mNotice">
+  <div class="sheet">
+    <h3>📢 알림판 고치기</h3>
+    <p class="hint">한 칸에 하나씩 써 주세요. 그림은 내용에 맞춰 <b>저절로</b> 붙어요 (준비물🎒 숙제📒 체육⚽ …).<br>
+      <b>⭐</b>를 누르면 그 줄이 형광펜처럼 강조돼요.</p>
+    <div class="nquick" id="nQuick"></div>
+    <div class="itemlist" id="nList"></div>
+    <div class="toggle" id="tgDaily"><span class="sw"><i></i></span>매일 아침 저절로 비우기 <small style="color:var(--sub)">(끄면 지울 때까지 남아요)</small></div>
+    <div class="row foot">
+      <button class="btn" id="btnNoticeClear">모두 지우기</button>
+      <div class="spacer"></div>
+      <button class="btn" id="btnNoticeAdd">➕ 한 줄 더</button>
+      <button class="btn primary" id="btnNoticeDone">다 됐어요</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="mItems">
   <div class="sheet">
     <h3>📚 확인할 것</h3>
@@ -590,9 +643,14 @@ function normalize(d){
   d.clean=d.clean||null;         // 마지막 배정 결과
   d.lunch=d.lunch&&Array.isArray(d.lunch.ids)? d.lunch : null;   // 오늘 점심시간이 없는 친구 {at, ids}
   d.cleanSel=Array.isArray(d.cleanSel)? d.cleanSel : [];   // 청소 대상을 뽑을 항목들
+  /* 📢 알림판 {lines:[{t,star}], daily:매일 비우기, at:마지막으로 고친 날} */
+  const n=d.notice||{}; d.notice={lines:Array.isArray(n.lines)? n.lines.map(l=>({t:String(l.t||''), star:!!l.star})) : [],
+    daily:!!n.daily, at:n.at||dayKey()};
+  if(d.notice.daily && d.notice.at!==dayKey()){ d.notice.lines=[]; d.notice.at=dayKey(); }
   return d;
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function dayKey(){ const t=new Date(); return t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate(); }
 function today(){ const t=new Date(); return `${t.getMonth()+1}/${t.getDate()}`; }
 const item=()=>S.items.find(i=>i.id===S.active)||null;
 const isMark=it=>it&&it.kind==='mark';
@@ -791,6 +849,70 @@ function fitSubmit(){
   while(over() && sc>0.35){ sc=Math.round((sc-0.05)*100)/100; g.style.setProperty('--sc',sc); }
 }
 window.addEventListener('resize',()=>{ if($('#subShow').classList.contains('on')) fitSubmit(); });
+
+/* ── 📢 알림판: 아이들에게 알릴 것을 크게 ── */
+const NOTICE_ICONS=[[/준비물|챙겨|가져/,'🎒'],[/숙제|과제/,'📒'],[/학습지|문제|수학|익힘/,'✏️'],[/알림장|사인|가정통신|통신문|안내장|동의서/,'📮'],
+  [/시험|평가|단원/,'📝'],[/체육|운동|줄넘기|체육복/,'⚽'],[/우유/,'🥛'],[/급식|점심|밥/,'🍚'],[/책|독서|도서/,'📚'],
+  [/일기|글쓰기/,'📔'],[/미술|그림|색연필|물감/,'🎨'],[/음악|리코더|악기|노래/,'🎵'],[/생일|축하/,'🎂'],
+  [/우산|비가|비 와|비옷/,'☂️'],[/청소|정리|분리수거/,'🧹'],[/현장|체험|소풍|견학/,'🚌'],[/방학|쉬는 ?날|휴일|재량/,'🏖️'],
+  [/발표|공연|학예/,'🎤'],[/안전|조심|주의/,'⚠️'],[/돈|회비|용돈/,'💰'],[/일정|오늘|내일|시간|교시/,'⏰']];
+function noticeIcon(t){ for(const [re,ic] of NOTICE_ICONS) if(re.test(t)) return ic; return '📌'; }
+const NOTICE_QUICK=['내일 준비물: ','숙제: ','오늘 일정: ','가정통신문 내기: ','체육복 입고 오기','우유 꼭 마시기'];
+const DAYS=['일','월','화','수','목','금','토'];
+function noticeLines(){ return S.notice.lines.filter(l=>l.t.trim()); }
+function openNotice(){ drawNotice(); $('#noticeShow').classList.add('on'); fitNotice(); }
+function drawNotice(){
+  const d=new Date(); $('#nDate').textContent=`${d.getMonth()+1}월 ${d.getDate()}일 ${DAYS[d.getDay()]}요일`;
+  const ls=noticeLines(), b=$('#nBoard');
+  b.innerHTML = ls.length
+    ? ls.map(l=>`<div class="nline${l.star?' star':''}"><span class="ic">${noticeIcon(l.t)}</span><span class="tx"><span>${esc(l.t.trim())}</span></span></div>`).join('')
+    : `<div class="nempty">아직 알림이 없어요 🙂<br><small>아래 「✏️ 고치기」를 눌러 써 주세요</small></div>`;
+}
+/* 줄이 많으면 글씨를 줄여 한 화면에, 적으면 크게 */
+function fitNotice(){
+  const b=$('#nBoard'); let sc=1.3; b.style.setProperty('--ns',sc);
+  while(b.scrollHeight > b.clientHeight+2 && sc>0.3){ sc=Math.round((sc-0.05)*100)/100; b.style.setProperty('--ns',sc); }
+}
+window.addEventListener('resize',()=>{ if($('#noticeShow').classList.contains('on')) fitNotice(); });
+function openNoticeEdit(){
+  if(!S.notice.lines.length) S.notice.lines.push({t:'',star:false});
+  drawNoticeEdit(); $('#mNotice').classList.add('on');
+}
+function drawNoticeEdit(){
+  $('#nQuick').innerHTML=NOTICE_QUICK.map((q,i)=>`<button data-q="${i}">${noticeIcon(q)} ${esc(q.replace(/: $/,''))}</button>`).join('');
+  $('#tgDaily').querySelector('.sw').classList.toggle('on',S.notice.daily);
+  const box=$('#nList'); box.innerHTML='';
+  S.notice.lines.forEach((l,i)=>{
+    const r=document.createElement('div'); r.className='itemrow';
+    r.innerHTML=`<span class="ic">${l.t.trim()?noticeIcon(l.t):'📌'}</span><input type="text" placeholder="예) 내일 준비물: 색연필, 가위">
+      <button class="st${l.star?' on':''}" title="중요">⭐</button><button class="del" title="지우기">✕</button>`;
+    const inp=r.querySelector('input'); inp.value=l.t;
+    inp.oninput=()=>{ l.t=inp.value; r.querySelector('.ic').textContent=l.t.trim()?noticeIcon(l.t):'📌'; saveNotice(); };
+    inp.onkeydown=e=>{ if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); addNoticeLine('',i+1); } };
+    r.querySelector('.st').onclick=()=>{ l.star=!l.star; saveNotice(); drawNoticeEdit(); };
+    r.querySelector('.del').onclick=()=>{ S.notice.lines.splice(i,1); saveNotice(); drawNoticeEdit(); };
+    box.appendChild(r);
+  });
+}
+function addNoticeLine(t,at){
+  const ls=S.notice.lines, pos=at===undefined? ls.length : at;
+  /* 마지막 줄이 비어 있으면 거기에 채운다 */
+  if(at===undefined && ls.length && !ls[ls.length-1].t.trim()){ ls[ls.length-1].t=t; }
+  else ls.splice(pos,0,{t,star:false});
+  saveNotice(); drawNoticeEdit();
+  const idx=at===undefined? ls.length-1 : pos;
+  const inp=$$('#nList input')[idx]; if(inp){ inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length); inp.scrollIntoView({block:'center'}); }
+}
+function saveNotice(){ S.notice.at=dayKey(); save(); if($('#noticeShow').classList.contains('on')){ drawNotice(); fitNotice(); } }
+$('#btnNotice').onclick=openNotice;
+$('#btnNoticeEdit').onclick=openNoticeEdit;
+$('#btnCloseNotice').onclick=()=>$('#noticeShow').classList.remove('on');
+$('#btnNoticeAdd').onclick=()=>addNoticeLine('');
+$('#btnNoticeDone').onclick=()=>{ S.notice.lines=S.notice.lines.filter(l=>l.t.trim()); save(); $('#mNotice').classList.remove('on');
+  if(!$('#noticeShow').classList.contains('on')) openNotice(); else { drawNotice(); fitNotice(); } };
+$('#btnNoticeClear').onclick=()=>{ if(!confirm('알림을 모두 지울까요?')) return; S.notice.lines=[{t:'',star:false}]; saveNotice(); drawNoticeEdit(); };
+$('#nQuick').onclick=e=>{ const b=e.target.closest('button'); if(b) addNoticeLine(NOTICE_QUICK[+b.dataset.q]); };
+$('#tgDaily').onclick=()=>{ S.notice.daily=!S.notice.daily; saveNotice(); drawNoticeEdit(); };
 
 /* ── 항목 관리 ── */
 function openItems(){ drawItems(); $('#mItems').classList.add('on'); }
@@ -1280,7 +1402,7 @@ $('#btnCopy').onclick=async ()=>{
 
 $$('.modal').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('on'); }));
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){ closeShow(); if(!$('#mMove').classList.contains('on')) $('#cleanShow').classList.remove('on'); $$('.modal').forEach(m=>m.classList.remove('on')); }
+  if(e.key==='Escape'){ closeShow(); $('#noticeShow').classList.remove('on'); if(!$('#mMove').classList.contains('on')) $('#cleanShow').classList.remove('on'); $$('.modal').forEach(m=>m.classList.remove('on')); }
 });
 
 let toastTimer;
